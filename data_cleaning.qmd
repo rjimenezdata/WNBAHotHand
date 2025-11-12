@@ -46,6 +46,8 @@ shot_data |>
 ```{r box data -- player info, seasonal stats}
 box_data <- load_wnba_player_box(seasons = c(2022:2024)) |>
   filter(season_type == 2)
+
+box_data
 ```
 
 ```{r summary by season, player}
@@ -175,4 +177,123 @@ streak_data |>
 
 ```
 
+```{r MVP 2022 aja wilson}
+
+# box_data |>
+#   filter(athlete_display_name == "A'ja Wilson")
+# Aja wilson athlete id = 3149391
+shot_data |>
+  filter(season == 2022,
+         athlete_id_1 == 3149391,
+         scoring_play == TRUE) |>
+  ggplot(aes(x = coordinate_x_raw, y = coordinate_y_raw)) +
+  geom_point()
+
+shot_data |>
+  filter(season == 2022,
+         athlete_id_1 == 3149391) |>
+  ggplot(aes(x = coordinate_x_raw, color = scoring_play)) +
+  geom_density()
+
+shot_data |>
+  filter(season == 2022,
+         athlete_id_1 == 3149391) |>
+  ggplot(aes(x = coordinate_y_raw, color = scoring_play)) +
+  geom_density() +
+  coord_flip()
+
+shot_data |>
+  filter(season == 2022,
+         athlete_id_1 == 3149391,
+         scoring_play) |>
+  group_by(game_id) |>
+  summarize()
+
+
+streak_data |>
+  filter(season == 2022,
+         athlete_id_1 == 3149391) |>
+  ggplot(aes(x = make_streak_length)) +
+  geom_histogram(binwidth = 1) + 
+  scale_x_continuous(breaks = seq(0, 10))
+
+```
+
+```{r MVP 2023 breanna stewart}
+
+# box_data |>
+# filter(athlete_display_name == "Breanna Stewart")
+# Breanna Stewart athlete id = 2998928
+
+shot_data |>
+  filter(season == 2023,
+         athlete_id_1 == 2998928,
+         scoring_play == TRUE) |>
+  ggplot(aes(x = coordinate_x_raw, y = coordinate_y_raw)) +
+  geom_point()
+
+shot_data |>
+  filter(season == 2023,
+         athlete_id_1 == 2998928) |>
+  ggplot(aes(x = coordinate_x_raw, color = scoring_play)) +
+  geom_density()
+
+shot_data |>
+  filter(season == 2023,
+         athlete_id_1 == 2998928) |>
+  ggplot(aes(x = coordinate_y_raw, color = scoring_play)) +
+  geom_density() +
+  coord_flip()
+
+shot_data |>
+  filter(season == 2023,
+         athlete_id_1 == 2998928,
+         scoring_play) |>
+  group_by(game_id) |>
+  summarize()
+
+streak_data |>
+  filter(season == 2023,
+         athlete_id_1 == 2998928) |>
+  ggplot(aes(x = make_streak_length)) +
+  geom_histogram(binwidth = 1) + 
+  scale_x_continuous(breaks = seq(0, 10))
+```
+
+```{r}
+shot_data |>
+  filter(season == 2024,
+         athlete_id_1 == 3149391,
+         scoring_play == TRUE) |>
+  ggplot(aes(x = coordinate_x_raw, y = coordinate_y_raw)) +
+  geom_point()
+
+shot_data |>
+  filter(season == 2024,
+         athlete_id_1 == 3149391) |>
+  ggplot(aes(x = coordinate_x_raw, color = scoring_play)) +
+  geom_density()
+
+shot_data |>
+  filter(season == 2022,
+         athlete_id_1 == 3149391) |>
+  ggplot(aes(x = coordinate_y_raw, color = scoring_play)) +
+  geom_density() +
+  coord_flip()
+
+shot_data |>
+  filter(season == 2024,
+         athlete_id_1 == 3149391,
+         scoring_play) |>
+  group_by(game_id) |>
+  summarize()
+
+streak_data |>
+  filter(season == 2024,
+         athlete_id_1 == 3149391) |>
+  ggplot(aes(x = make_streak_length)) +
+  geom_histogram(binwidth = 1) + 
+  scale_x_continuous(breaks = seq(0, 10))
+  
+```
 
