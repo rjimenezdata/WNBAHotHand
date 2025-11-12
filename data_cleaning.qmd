@@ -1,0 +1,178 @@
+---
+title: "dataCleaning"
+format: html
+editor: source
+execute:
+  echo: false
+---
+
+```{r setup}
+# has WNBA pbp, box data
+#install.packages("wehoop")
+# for making a plot on a basketball court lol
+#install.packages("sportyR")
+
+library(tidyverse)
+library(wehoop)
+library(sportyR)
+```
+
+```{r load data}
+# 3 years of data, there was a rule change since 
+season_years <- c(2022:2024)
+
+pbp_data <- load_wnba_pbp(seasons = season_years)
+
+espn_wnba_teams()
+```
+
+```{r preview data}
+head(pbp_data)
+unique(pbp_data$type_text)
+```
+
+```{r filter shot data}
+shot_data <- pbp_data |>
+  filter(shooting_play == TRUE,
+         str_detect(type_text, "Free Throw") == FALSE,
+         season_type == 2)
+
+shot_data
+
+shot_data |>
+  slice_min(coordinate_y_raw)
+```
+
+```{r box data -- player info, seasonal stats}
+box_data <- load_wnba_player_box(seasons = c(2022:2024)) |>
+  filter(season_type == 2)
+```
+
+```{r summary by season, player}
+# summarize by game, player
+
+# replace NAs with 0s for summary (how do I use across(~.) again?)
+sum_stats <- box_data |>
+  mutate(minutes = case_when(is.na(minutes) ~ 0,
+            !is.na(minutes) ~ minutes),
+         points = case_when(is.na(points) ~ 0,
+            !is.na(points) ~ points),
+         field_goals_attempted = case_when(is.na(field_goals_attempted) ~ 0,
+                            !is.na(field_goals_attempted) ~ field_goals_attempted)) |>
+  
+  group_by(athlete_display_name) |>
+  
+  summarize(total_minutes = sum(minutes),
+    avg_minutes_played = round(mean(minutes),2), 
+    total_fg_att = sum(field_goals_attempted),
+    fg_att_min = sum(field_goals_attempted)/sum(minutes),
+            ppm = round(mean(sum(points)/sum(minutes)), 2))
+
+# this line assumes no change of position in the included years 
+# (takes first position for each athlete)
+sum_stats_pos <- sum_stats |>
+  left_join(box_data[, c(7, 38)], multiple = "first")
+
+sum_stats |>
+  ggplot(aes(x = avg_minutes_played)) +
+  geom_density()
+
+sum_stats |>
+  ggplot(aes(x = fg_att_min)) +
+  geom_density()
+
+sum_stats_pos |> ggplot(aes(x = avg_minutes_played, color = athlete_position_abbreviation)) +
+  geom_density()
+
+length(unique(shot_data$athlete_id_1))
+```
+
+235 unique athletes took shots in these 3 seasons.
+
+```{r summary across all players, by season}
+box_data |>
+  mutate(minutes = case_when(is.na(minutes) ~ 0,
+            !is.na(minutes) ~ minutes),
+         points = case_when(is.na(points) ~ 0,
+            !is.na(points) ~ points),
+         field_goals_attempted = case_when(is.na(field_goals_attempted) ~ 0,
+                            !is.na(field_goals_attempted) ~ field_goals_attempted)) |>
+  group_by(season) |>
+  summarize(avg_points = mean(points),
+            avg_playtime = mean(minutes),
+            avg_ppm = mean(sum(points)/sum(minutes)),
+            sd_points = sd(points),
+            sd_playtime = sd(minutes),
+            avg_fg_att = mean(field_goals_attempted),
+            sd_fg_att = sd(field_goals_attempted))
+```
+
+```{r example shot data plot}
+shot_data 
+
+geom_basketball(league = "WNBA", 
+                    display_range = "offense",
+                    color_updates = list(
+                      offensive_half_court = "white",
+                      defensive_half_court = "white",
+                      court_apron = "white",
+                      center_circle_fill = "white",
+                      two_point_range = "white",
+                      painted_area = "white",
+                      free_throw_circle_fill = "white",
+                      basket_ring = "black")) +
+  geom_point(data = shot_data, aes(x = abs(coordinate_x)+4, y = coordinate_y, color = scoring_play))
+
+# heat map kinda thing for percent shooting by zone etc
+# this is helpful for individual players
+
+
+shot_data |>
+  mutate(shot_distance = sqrt(coordinate_x^2 + coordinate_y^2)) |>
+  ggplot(aes(x = shot_distance)) + 
+  geom_density()
+
+shot_data |>
+  mutate(shot_distance = sqrt(coordinate_x^2 + coordinate_y^2)) |>
+  group_by()
+
+```
+
+```{r look at streaks}
+
+streak_data <- shot_data |>
+  group_by(game_id, athlete_id_1) |>
+  mutate(is_make  = scoring_play == TRUE,
+    is_miss  = !is_make,
+    miss_grp = cumsum(is_miss),               
+    make_grp = cumsum(is_make)) |>
+  group_by(game_id, athlete_id_1, miss_grp) |>
+  mutate(make_streak_length = if_else(is_make, cumsum(is_make), 0)) |>
+  group_by(game_id, athlete_id_1, make_grp) |>
+  mutate(miss_streak_length = if_else(is_miss, cumsum(is_miss), 0)) |>
+  ungroup()
+
+```
+
+```{r streak length distributions}
+
+streak_data |>
+  ggplot(aes(x = make_streak_length)) +
+  geom_histogram(binwidth = 1) + 
+  scale_x_continuous(breaks = seq(0, 10))
+
+
+streak_data |>
+  ggplot(aes(x = miss_streak_length)) +
+  geom_histogram(binwidth = 1) + 
+  scale_x_continuous(breaks = seq(0, 15))
+
+streak_data |>
+  slice_max(make_streak_length)
+
+streak_data |>
+  slice_max(miss_streak_length)
+
+```
+
+
