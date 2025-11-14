@@ -177,6 +177,13 @@ streak_data |>
 streak_data |>
   slice_max(miss_streak_length)
 
+streak_data |>
+  filter(make_streak_length > 3)
+
+# use overall shot distance (x_coord_raw-25)^2 + y_coord_raw^2
+
+# use time variable more
+
 ```
 
 ```{r MVP 2022 aja wilson}
