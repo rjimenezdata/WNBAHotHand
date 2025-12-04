@@ -37,9 +37,11 @@ unique(pbp_data$type_text)
 shot_data <- pbp_data |>
   filter(shooting_play == TRUE,
          str_detect(type_text, "Free Throw") == FALSE,
-         season_type == 2)
+         season_type == 2,
+         # remove for-fun teams: Team Stewart, Team Wilson, Team USA, etc
+         !team_id %in% c(112530, 126287, 97, 96))
 
-shot_data
+head(shot_data)
 
 shot_data |>
   slice_min(coordinate_y_raw)
@@ -47,9 +49,10 @@ shot_data |>
 
 ```{r box data -- player info, seasonal stats}
 box_data <- load_wnba_player_box(seasons = c(2022:2024)) |>
-  filter(season_type == 2)
+  filter(season_type == 2,
+         !team_id %in% c(126287, 112530, 97, 96))
 
-box_data
+head(box_data)
 ```
 
 ```{r summary by season, player}
@@ -112,7 +115,6 @@ box_data |>
 ```
 
 ```{r example shot data plot}
-shot_data 
 
 geom_basketball(league = "WNBA", 
                     display_range = "offense",
@@ -136,9 +138,6 @@ shot_data |>
   ggplot(aes(x = shot_distance)) + 
   geom_density()
 
-shot_data |>
-  mutate(shot_distance = sqrt(coordinate_x^2 + coordinate_y^2)) |>
-  group_by()
 
 ```
 
@@ -153,8 +152,15 @@ streak_data <- shot_data |>
   group_by(game_id, athlete_id_1, miss_grp) |>
   mutate(make_streak_length = if_else(is_make, cumsum(is_make), 0)) |>
   group_by(game_id, athlete_id_1, make_grp) |>
-  mutate(miss_streak_length = if_else(is_miss, cumsum(is_miss), 0)) |>
+  mutate(miss_streak_length = if_else(is_miss, cumsum(is_miss), 0),
+         shot_distance = sqrt(coordinate_x^2 + coordinate_y^2)) |>
   ungroup()
+
+streak_data |>
+  slice_max(make_streak_length)
+
+streak_data |>
+  slice_max(miss_streak_length)
 
 ```
 
@@ -183,6 +189,9 @@ streak_data |>
 # use overall shot distance (x_coord_raw-25)^2 + y_coord_raw^2
 
 # use time variable more
+
+streak_data |>
+  ggplot(aes(x = make_streak_length, y = shot_distance)) + geom_point() + geom_smooth(method = "lm")
 
 ```
 
@@ -403,9 +412,10 @@ streak_stats(test_streak$is_make, streak_length)
 
 streak_length <- 3
 team_streaks <- streak_data |>
-  group_by(game_id, team_id) |>
-  summarize(stats = list(streak_stats(is_make, streak_length)), .groups = "drop") |>
-  unnest(stats)
+  group_by(game_id, team_id, season) |>
+  summarize(streak_stats = list(streak_stats(is_make, streak_length)), .groups = "drop") |>
+  unnest(streak_stats) |>
+  mutate(team_id = as.factor(team_id))
 
 team_streaks |>
   ggplot(aes(x = phat_after_Sstreak)) +
@@ -444,6 +454,120 @@ streak_data |>
 streak_data |>
   filter(game_id == 401391743,
          team_id == 18)
+
+# shot distance vs make streak length for longest streak in dataset
+streak_data |>
+  filter(game_id == 401620372,
+         team_id == 8) |>
+  ggplot(aes(x = make_streak_length, y = shot_distance)) + geom_point() + geom_smooth(method = "lm")
+
+streak_data |>
+  filter(game_id == 401391743,
+         team_id == 18) |>
+  ggplot(aes(x = make_streak_length, y = shot_distance)) + geom_point() + geom_smooth(method = "lm")
 ```
 
-Investigate individual players when team looks hot? Napheesa Collier had streak of length 7!!
+Investigating the champions for each year: how do their distributions look compared to the league average?
+
+```{r}
+# las vegas aces, 2022
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2022) |>
+  ggplot(aes(x = phat_after_Sstreak)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2022) |>
+  ggplot(aes(x = phat_Sstreak_vs_others)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2022) |>
+  ggplot(aes(x = phat_Sstreak_vs_Fstreak)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2022) |>
+  ggplot(aes(x = Sstreak_frequency)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2022) |>
+  ggplot(aes(x = longest_run_success)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2022) |>
+  ggplot(aes(x = n_runs)) + geom_histogram()
+```
+
+```{r}
+# las vegas aces, 2023
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2023) |>
+  ggplot(aes(x = phat_after_Sstreak)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2023) |>
+  ggplot(aes(x = phat_Sstreak_vs_others)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2023) |>
+  ggplot(aes(x = phat_Sstreak_vs_Fstreak)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2023) |>
+  ggplot(aes(x = Sstreak_frequency)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2023) |>
+  ggplot(aes(x = longest_run_success)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 17,
+         season == 2023) |>
+  ggplot(aes(x = n_runs)) + geom_histogram()
+```
+
+
+```{r}
+# new york liberty, 2024
+
+team_streaks |>
+  filter(team_id == 9,
+         season == 2024) |>
+  ggplot(aes(x = phat_after_Sstreak)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 9,
+         season == 2024) |>
+  ggplot(aes(x = phat_Sstreak_vs_others)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 9,
+         season == 2024) |>
+  ggplot(aes(x = phat_Sstreak_vs_Fstreak)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 9,
+         season == 2024) |>
+  ggplot(aes(x = Sstreak_frequency)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 9,
+         season == 2024) |>
+  ggplot(aes(x = longest_run_success)) + geom_histogram()
+
+team_streaks |>
+  filter(team_id == 9,
+         season == 2024) |>
+  ggplot(aes(x = n_runs)) + geom_histogram()
+```
