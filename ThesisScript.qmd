@@ -1,0 +1,46 @@
+---
+title: "Thesis Code"
+author: "Ruben Jimenez"
+format: html
+editor: visual
+---
+
+## Load essential libraries
+
+```{r setup}
+library(tidyverse)
+library(wehoop)
+library(mHMMbayes)
+```
+
+## Load in 2022-2024 data from wehoop package
+
+```{r}
+season_years <- c(2022:2024)
+pbp_data <- load_wnba_pbp(seasons = season_years)
+```
+
+## Filter down data to only shots from regular and post-season, winning teams 
+
+The Las Vegas Aces won the championship in 2022. The Las Vegas Aces won the championship in 2023. The New York Liberty won the championship in 2024. These are the teams we are interested in investigating.
+
+```{r}
+shot_data <- pbp_data |>
+  filter(shooting_play == TRUE,
+         str_detect(type_text, "Free Throw") == FALSE,
+         season_type %in% c(2, 3),
+         # remove for-fun teams: Team Stewart, Team Wilson, Team USA, etc
+         !team_id %in% c(112530, 126287, 97, 96),
+         team_id %in% c(17, 9)) |>
+         # LV Aces team ID = 17, NY Liberty team ID = 9
+  mutate(athlete_id_1 = as.factor(athlete_id_1),
+         type_text = as.factor(type_text)) |>
+  arrange(game_date)
+```
+
+How to define state behaviors? Like for the transmission probabilities?
+
+## Aims:
+
+1.  To determine what offensive factors might lead to hot/cold states
+2.  To determine where the hot/cold streaks may have occurred, and how often
