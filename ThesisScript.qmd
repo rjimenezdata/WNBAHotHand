@@ -20,9 +20,9 @@ season_years <- c(2022:2024)
 pbp_data <- load_wnba_pbp(seasons = season_years)
 ```
 
-## Filter down data to only shots from regular and post-season, winning teams 
+## Filter down data to only shots from regular and post-season
 
-The Las Vegas Aces won the championship in 2022. The Las Vegas Aces won the championship in 2023. The New York Liberty won the championship in 2024. These are the teams we are interested in investigating.
+The Las Vegas Aces won the championship in 2022. The Las Vegas Aces won the championship in 2023. The New York Liberty won the championship in 2024. These are the teams we are interested in investigating, but I am open to looking at other teams too. How does including all teams vs. including only winning teams in the data play out?
 
 ```{r}
 shot_data <- pbp_data |>
@@ -40,7 +40,28 @@ shot_data <- pbp_data |>
 
 How to define state behaviors? Like for the transmission probabilities?
 
+Original paper uses games as observational units. Why not offensive possessions or shots?
+
+Does using games as observational units mean we can only use game-level variables, like total shots per game per team?
+
 ## Aims:
 
 1.  To determine what offensive factors might lead to hot/cold states
 2.  To determine where the hot/cold streaks may have occurred, and how often
+3.  Determine average length of being in each state. From my understanding, this should just be the long-run marginal probabilities if there is a stationary distribution
+
+![](images/basic-structure-of-a-hidden-markov-model.png){width="673"}
+
+Latent states $S$: ideally, hot and cold, maybe baseline average as well (2-3 states)
+
+Observations $X_{ij}$: either games or shots
+
+Initial distribution $\alpha$: this is going to be the probability of starting in either state. This should be unknown.
+
+Transition probabilities $p_{ij}$: this is going to be a function of covariates, which are either game-level or shot-level. Let MHMMBayes do heavy lifting?
+
+Transition matrix $P$: this is going to contain transition probabilities.
+
+Each team is going to have a separate transition matrix and initial distribution (most likely)
+
+How it plays out in my head: We find hidden states hot/cold using observations, which are either shots or games. The probabilities given in the initial distribution are naive. The probabilities given in the transition matrix are determined by game- or shot-level covariates. How do limiting distributions come into play? Is this something I should let MHMMBayes handle? Still don't really understand the Bayesian part of it.
