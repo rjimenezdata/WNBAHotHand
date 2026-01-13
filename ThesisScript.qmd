@@ -65,3 +65,9 @@ Transition matrix $P$: this is going to contain transition probabilities.
 Each team is going to have a separate transition matrix and initial distribution (most likely)
 
 How it plays out in my head: We find hidden states hot/cold using observations, which are either shots or games. The probabilities given in the initial distribution are naive. The probabilities given in the transition matrix are determined by game- or shot-level covariates. How do limiting distributions come into play? Is this something I should let MHMMBayes handle? Still don't really understand the Bayesian part of it.
+
+Notes: maybe start without covariates for emission probability, treat as a missing data problem. Only look at shot sequences, be able to use that to see if hot or cold.
+
+Maybe look at regularized transition probabilities since the probability of staying in the same state is gonna be high if time is discrete.
+
+Figure out what the observed "states" are: shot attempts, shot makes? shot miss/shot make/no shot?
