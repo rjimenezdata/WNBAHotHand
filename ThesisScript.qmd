@@ -88,6 +88,13 @@ shot_data |>
   mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
            last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
          diff_dist = shot_dist - last_shot_dist,
+         last_made = lag(scoring_play)) |>
+  ggplot(aes(x = last_shot_dist, y = shot_dist)) + geom_point() + geom_smooth(method = "loess") + labs(title = "Difference in distance from current to last shot \n as a function of the previous shot distance", x = "Previous shot distance", y = "Current minus last shot distance (positive = further)")
+
+shot_data |>
+  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
+           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
+         diff_dist = shot_dist - last_shot_dist,
          last_made = as.numeric(lag(scoring_play))) |>
   filter(is.na(last_made) != TRUE) |>
   ggplot(aes(x = diff_dist, y = last_made)) + geom_point() + stat_smooth(method = "glm", 
