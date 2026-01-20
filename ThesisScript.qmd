@@ -71,3 +71,26 @@ Notes: maybe start without covariates for emission probability, treat as a missi
 Maybe look at regularized transition probabilities since the probability of staying in the same state is gonna be high if time is discrete.
 
 Figure out what the observed "states" are: shot attempts, shot makes? shot miss/shot make/no shot?
+
+## Current vs. next shot distance
+
+Here I inspect whether there seems to be any sort of linear relationship between the current and next shot distance. There does appear to be one. Then by extension there should be some relationship between probability of making the last shot and the distance to the next shot.
+
+```{r}
+shot_data |>
+  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
+           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
+         diff_dist = shot_dist - last_shot_dist,
+         last_made = lag(scoring_play)) |>
+  ggplot(aes(x = last_shot_dist, y = diff_dist)) + geom_point() + geom_smooth(method = "loess") + labs(title = "Difference in distance from current to last shot \n as a function of the previous shot distance", x = "Previous shot distance", y = "Current minus last shot distance (positive = further)")
+
+shot_data |>
+  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
+           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
+         diff_dist = shot_dist - last_shot_dist,
+         last_made = as.numeric(lag(scoring_play))) |>
+  filter(is.na(last_made) != TRUE) |>
+  ggplot(aes(x = diff_dist, y = last_made)) + geom_point() + stat_smooth(method = "glm", 
+              method.args = list(family = binomial), 
+              se = FALSE) + labs(title = "Difference in shot distance \n as a function of whether last shot was made", y = "Last shot made? 1 = yes, 0 = no", x = "Current minus last shot distance (positive = further)")
+```
