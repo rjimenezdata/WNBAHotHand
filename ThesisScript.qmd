@@ -34,7 +34,8 @@ shot_data <- pbp_data |>
          team_id %in% c(17, 9)) |>
          # LV Aces team ID = 17, NY Liberty team ID = 9
   mutate(athlete_id_1 = as.factor(athlete_id_1),
-         type_text = as.factor(type_text)) |>
+         type_text = as.factor(type_text),
+         time_elapsed = 2400 - end_game_seconds_remaining) |>
   arrange(game_date)
 ```
 
@@ -100,4 +101,48 @@ shot_data |>
   ggplot(aes(x = diff_dist, y = last_made)) + geom_point() + stat_smooth(method = "glm", 
               method.args = list(family = binomial), 
               se = FALSE) + labs(title = "Difference in shot distance \n as a function of whether last shot was made", y = "Last shot made? 1 = yes, 0 = no", x = "Current minus last shot distance (positive = further)")
+
+p <- shot_data |>
+  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
+           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
+         diff_dist = shot_dist - last_shot_dist,
+         last_made = as.numeric(lag(scoring_play))) |>
+  filter(is.na(last_made) != TRUE,
+         team_id == 17) |>
+  ggplot(aes(x = diff_dist)) + geom_histogram(bins = 100) + labs(title = "Difference in distance from last to current shot", subtitle = "0 = last shot was a miss, 1 = last shot was made", x = "Current shot distance - previous shot distance (ft)", y = "Frequency")
+
+p + facet_wrap(vars(last_made))
+
+```
+
+## Discretize Time
+
+Here I want to discretize the time in my data.
+
+```{r}
+
+# do this for one team for one year
+game_time_score <- shot_data |>
+  filter(team_id == 17,
+         season == 2022) |>
+  select(game_id, time_elapsed, score_value)
+
+discrete_times <- game_time_score |>
+  select(game_id, time_elapsed) |>
+  group_by(game_id) |>
+  summarize(max_time = max(time_elapsed)) |>
+  rowwise() |>
+  mutate(time_elapsed = list(0:max_time)) |>
+  unnest(time_elapsed)
+
+df_discrete <- discrete_times |>
+  select(!max_time) |>
+  left_join(game_time_score,
+            by = join_by(game_id, time_elapsed)) |>
+  mutate(event = case_when(score_value == 0 ~ 2,
+                           score_value %in% c(2, 3) ~ 3)) |>
+  # sanity check: do values in events and score_value match up?
+   replace_na(list(event = 1)) |>
+  # sanity check: do values in events and score_value match up?
+   select(!score_value)
 ```
