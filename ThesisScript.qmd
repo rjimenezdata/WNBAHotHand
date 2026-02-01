@@ -10,7 +10,7 @@ editor: visual
 ```{r setup}
 library(tidyverse)
 library(wehoop)
-library(mHMMbayes)
+library(msm)
 ```
 
 ## Load in 2022-2024 data from wehoop package
@@ -145,4 +145,75 @@ df_discrete <- discrete_times |>
    replace_na(list(event = 1)) |>
   # sanity check: do values in events and score_value match up?
    select(!score_value)
+```
+
+## Look at state transition matrix
+
+```{r}
+# this is for one season for one team. Here, state 1 is defined as no shots being taken, so of course most of the transitions are nothing happening --> nothing happening
+statetable.msm(event, game_id, data = df_discrete)
+
+# let's try the nondiscretized data.
+lv_2022 <- shot_data |>
+  filter(team_id == 17,
+         season == 2022) |>
+  mutate(event = case_when(
+    score_value == 0 ~ 1,
+    score_value == 2 ~ 2,
+    score_value == 3 ~ 3
+  ))
+
+# gives a state table for a season
+statetable.msm(event, game_id, data = lv_2022)
+
+lv_2022_alt <- shot_data |>
+  filter(team_id == 17,
+         season == 2022) |>
+  mutate(event = case_when(
+    score_value == 0 ~ 1,
+    score_value %in% c(2, 3) ~ 2
+  ))
+
+statetable.msm(event, game_id, data = lv_2022_alt)
+```
+
+This makes way more sense. This is saying within a game, how many times this season did we see a transition from state i –\> state j.
+
+## Build the desired datasets
+
+```{r}
+build_data <- function(df, team, season){
+  shot_data |>
+    filter(team_id == team,
+           season == season) |>
+    mutate(event = as.integer(case_when(
+       score_value == 0 ~ 1,
+    score_value == 2 ~ 2,
+    score_value == 3 ~ 3
+    ))) |>
+    # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
+    select(game_id, game_play_number, event)
+}
+
+champs_2022 <- build_data(shot_data, 17, 2022)
+champs_2023 <- build_data(shot_data, 17, 2023)
+champs_2024 <- build_data(shot_data, 9, 2024)
+```
+
+```{r}
+# define a transition structure
+# all transitions are possible here
+# this might make it so that this doesn't work because of the discrete data
+
+Q <- matrix(c(.5, .25, .25,
+              .25, .5, .25,
+              .25, .25, .5), nrow = 3, byrow = T)
+
+# this doesn't work. numerical overflow in calculating likelihood.
+champs_2022.msm <- msm(event ~ game_play_number,
+                       subject = game_id,
+                       data = champs_2022,
+                       qmatrix = Q)
+
+
 ```
