@@ -182,7 +182,7 @@ This makes way more sense. This is saying within a game, how many times this sea
 ## Build the desired datasets
 
 ```{r}
-build_data <- function(df, team, season){
+build_data_3states <- function(df, team, season){
   shot_data |>
     filter(team_id == team,
            season == season) |>
@@ -195,9 +195,27 @@ build_data <- function(df, team, season){
     select(game_id, game_play_number, event)
 }
 
-champs_2022 <- build_data(shot_data, 17, 2022)
-champs_2023 <- build_data(shot_data, 17, 2023)
-champs_2024 <- build_data(shot_data, 9, 2024)
+build_data_2states <- function(df, team, season){
+  shot_data |>
+    filter(team_id == team,
+           season == season) |>
+    mutate(event = as.integer(case_when(
+       score_value == 0 ~ 1,
+    score_value %in% c(2, 3) ~ 2
+    ))) |>
+    # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
+    select(game_id, game_play_number, event)
+}
+
+champs_2022 <- build_data_2states(shot_data, 17, 2022)
+champs_2023 <- build_data_2states(shot_data, 17, 2023)
+champs_2024 <- build_data_2states(shot_data, 9, 2024)
+
+# champs_2022 <- build_data_2states(shot_data, 17, 2022) |>
+#   group_by(game_id) |>
+#   summarize(time = (game_play_number - min(game_play_number))/(max(game_play_number) - min(game_play_number)),
+#             event = event) |>
+#   unnest(game_id)
 ```
 
 ```{r}
@@ -205,15 +223,21 @@ champs_2024 <- build_data(shot_data, 9, 2024)
 # all transitions are possible here
 # this might make it so that this doesn't work because of the discrete data
 
-Q <- matrix(c(.5, .25, .25,
-              .25, .5, .25,
-              .25, .25, .5), nrow = 3, byrow = T)
+Q <- matrix(1, 3, 3)
 
 # this doesn't work. numerical overflow in calculating likelihood.
+# it works when there are 2 states, but not 3
+# nevermind this doesn't work it doesn't converge
 champs_2022.msm <- msm(event ~ game_play_number,
                        subject = game_id,
                        data = champs_2022,
-                       qmatrix = Q)
+                       qmatrix = Q,
+                       gen.inits = T)
 
 
+test.msm <- msm(event ~ time_elapsed,
+                subject = game_id,
+                data = df_discrete,
+                qmatrix = Q,
+                gen.inits = T)
 ```
