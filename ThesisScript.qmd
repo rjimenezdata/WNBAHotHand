@@ -204,6 +204,7 @@ build_data_2states <- function(df, team, season){
     score_value %in% c(2, 3) ~ 2
     ))) |>
     # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
+    # add a half second to non-unique time_elapsed values
     select(game_id, game_play_number, event)
 }
 
@@ -225,16 +226,16 @@ champs_2022_3states <- build_data_3states(shot_data, 17, 2022)
 # all transitions are possible here
 # this might make it so that this doesn't work because of the discrete data
 
-Q <- matrix(1, 3, 3)
+Q <- matrix(1, 2, 2)
 
 # this doesn't work. numerical overflow in calculating likelihood.
 # it works when there are 2 states, but not 3
 # nevermind this doesn't work it doesn't converge
-# champs_2022.msm <- msm(event ~ game_play_number,
-#                        subject = game_id,
-#                        data = champs_2022,
-#                        qmatrix = Q,
-#                        gen.inits = T)
+champs_2022.msm <- msm(event ~ game_play_number,
+                       subject = game_id,
+                       data = champs_2022,
+                       qmatrix = Q,
+                       gen.inits = T)
 
 champs_2022_3states.msm <- msm(event ~ game_play_number,
                        subject = game_id,
