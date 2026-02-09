@@ -191,6 +191,10 @@ build_data_3states <- function(df, team, season){
     score_value == 2 ~ 2,
     score_value == 3 ~ 3
     ))) |>
+    group_by(game_id) |>
+    summarize(last_quarter = max(qtr)) |>
+    filter(last_quarter < 5) |>
+    ungroup() |>
     # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
     select(game_id, time_elapsed, event) |>
     group_by(game_id, time_elapsed) |>
@@ -200,23 +204,28 @@ build_data_3states <- function(df, team, season){
     rename(time_elapsed = time_elapsed_adj)
 }
 
-build_data_2states <- function(df, team, season){
-  shot_data |>
-    filter(team_id == team,
-           season == season) |>
-    mutate(event = as.integer(case_when(
-       score_value == 0 ~ 1,
-    score_value %in% c(2, 3) ~ 2
-    ))) |>
-    # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
-    # add .1 seconds to non-unique time_elapsed values
-    select(game_id, game_play_number, event) |>
-    group_by(game_id, time_elapsed) |>
-    mutate(dup_in_game = n() > 1, time_elapsed_adj = time_elapsed + (row_number() - 1) * 0.1) |>
-  ungroup() |>
-    select(-c(time_elapsed, dup_in_game)) |>
-    rename(time_elapsed = time_elapsed_adj)
-}
+# build_data_2states <- function(df, team, season){
+#   shot_data |>
+#     filter(team_id == team,
+#            season == season) |>
+#     mutate(event = as.integer(case_when(
+#        score_value == 0 ~ 1,
+#     score_value %in% c(2, 3) ~ 2
+#     ))) |>
+#     # eliminate games that have an overtime
+#     group_by(game_id) |>
+#     summarize(last_quarter = max(qtr)) |>
+#     filter(last_quarter < 5) |>
+#     ungroup() |>
+#     # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
+#     # add .1 seconds to non-unique time_elapsed values
+#     select(game_id, game_play_number, event) |>
+#     group_by(game_id, time_elapsed) |>
+#     mutate(dup_in_game = n() > 1, time_elapsed_adj = time_elapsed + (row_number() - 1) * 0.1) |>
+#   ungroup() |>
+#     select(-c(time_elapsed, dup_in_game)) |>
+#     rename(time_elapsed = time_elapsed_adj)
+# }
 
 champs_2022 <- build_data_2states(shot_data, 17, 2022)
 champs_2023 <- build_data_2states(shot_data, 17, 2023)
