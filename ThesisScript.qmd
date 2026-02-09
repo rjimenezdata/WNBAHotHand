@@ -192,8 +192,7 @@ build_data_3states <- function(df, team, season){
     score_value == 3 ~ 3
     ))) |>
     group_by(game_id) |>
-    summarize(last_quarter = max(qtr)) |>
-    filter(last_quarter < 5) |>
+    filter(!any(qtr >= 5)) |>
     ungroup() |>
     # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
     select(game_id, time_elapsed, event) |>
@@ -204,28 +203,27 @@ build_data_3states <- function(df, team, season){
     rename(time_elapsed = time_elapsed_adj)
 }
 
-# build_data_2states <- function(df, team, season){
-#   shot_data |>
-#     filter(team_id == team,
-#            season == season) |>
-#     mutate(event = as.integer(case_when(
-#        score_value == 0 ~ 1,
-#     score_value %in% c(2, 3) ~ 2
-#     ))) |>
-#     # eliminate games that have an overtime
-#     group_by(game_id) |>
-#     summarize(last_quarter = max(qtr)) |>
-#     filter(last_quarter < 5) |>
-#     ungroup() |>
-#     # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
-#     # add .1 seconds to non-unique time_elapsed values
-#     select(game_id, game_play_number, event) |>
-#     group_by(game_id, time_elapsed) |>
-#     mutate(dup_in_game = n() > 1, time_elapsed_adj = time_elapsed + (row_number() - 1) * 0.1) |>
-#   ungroup() |>
-#     select(-c(time_elapsed, dup_in_game)) |>
-#     rename(time_elapsed = time_elapsed_adj)
-# }
+build_data_2states <- function(df, team, season){
+  shot_data |>
+    filter(team_id == team,
+           season == season) |>
+    mutate(event = as.integer(case_when(
+       score_value == 0 ~ 1,
+    score_value %in% c(2, 3) ~ 2
+    ))) |>
+    # eliminate games that have an overtime
+    group_by(game_id) |>
+    filter(!any(qtr >= 5)) |>
+    ungroup() |>
+    # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
+    # add .1 seconds to non-unique time_elapsed values
+    select(game_id, time_elapsed, event) |>
+    group_by(game_id, time_elapsed) |>
+    mutate(dup_in_game = n() > 1, time_elapsed_adj = time_elapsed + (row_number() - 1) * 0.1) |>
+  ungroup() |>
+    select(-c(time_elapsed, dup_in_game)) |>
+    rename(time_elapsed = time_elapsed_adj)
+}
 
 champs_2022 <- build_data_2states(shot_data, 17, 2022)
 champs_2023 <- build_data_2states(shot_data, 17, 2023)
@@ -244,23 +242,27 @@ champs_2022_3states <- build_data_3states(shot_data, 17, 2022)
 # define a transition structure
 # all transitions are possible here
 # this might make it so that this doesn't work because of the discrete data
+# package initializes emission matrix/misclassification matrix as 0.1 in each entry
+# Q gives initial distribution of "allowed" transitions, so 1 is suitable in each
 
-Q <- matrix(1, 3, 3)
+Q <- matrix(1, 2, 2)
+E <- matrix(.1, 2, 2)
 
-# this doesn't work. numerical overflow in calculating likelihood.
 # it works when there are 2 states, but not 3
-# nevermind this doesn't work it doesn't converge
-# champs_2022.msm <- msm(event ~ game_play_number,
-#                        subject = game_id,
-#                        data = champs_2022,
-#                        qmatrix = Q,
-#                        gen.inits = T)
-
-champs_2022_3states.msm <- msm(event ~ time_elapsed,
+champs_2022.msm <- msm(event ~ time_elapsed,
                        subject = game_id,
-                       data = champs_2022_3states,
+                       data = champs_2022,
                        qmatrix = Q,
-                       gen.inits = T)
+                       ematrix = E)
+
+# Q2 <- matrix(1, 3, 3)
+# E2 <- matrix(.1, 3, 3)
+# 
+# champs_2022_3states.msm <- msm(event ~ time_elapsed,
+#                        subject = game_id,
+#                        data = champs_2022_3states,
+#                        qmatrix = Q2,
+#                        ematrix = E2)
 
 
 # does not converge for 3 states when data is discrete, even with naive prior
