@@ -245,8 +245,9 @@ champs_2022_3states <- build_data_3states(shot_data, 17, 2022)
 # package initializes emission matrix/misclassification matrix as 0.1 in each entry
 # Q gives initial distribution of "allowed" transitions, so 1 is suitable in each
 
-Q <- matrix(1, 2, 2)
-E <- matrix(.1, 2, 2)
+Q <- matrix(c(0, 1,
+              1, 0), byrow = T, nrow = 2)
+E <- matrix(.5, 2, 2)
 
 # it works when there are 2 states, but not 3
 champs_2022.msm <- msm(event ~ time_elapsed,
@@ -255,8 +256,11 @@ champs_2022.msm <- msm(event ~ time_elapsed,
                        qmatrix = Q,
                        ematrix = E)
 
-# Q2 <- matrix(1, 3, 3)
-# E2 <- matrix(.1, 3, 3)
+# Q2 <- matrix(c(0, .5, .5,
+#                .5, 0, .5,
+#                .5, .5, 0), nrow = 3, byrow = T)
+# E2 <- matrix(c(0, .5, .5,
+#                .5, 0, .5), nrow = 2, byrow = T)
 # 
 # champs_2022_3states.msm <- msm(event ~ time_elapsed,
 #                        subject = game_id,
