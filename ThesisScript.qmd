@@ -375,5 +375,5 @@ covariate.msm <- msm(event ~ time_elapsed,
                        data = covariate_df,
                        qmatrix = Q,
                        hmodel = hmod,
-                       hcovariates = list(~ athlete_id_1 + shot_dist, ~ athlete_id_1 + shot_dist))
+                       covariates = ~ shot_dist)
 ```
