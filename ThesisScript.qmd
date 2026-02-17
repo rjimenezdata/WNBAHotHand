@@ -369,4 +369,11 @@ build_data_covariates <- function(df, team, season){
 }
 
 covariate_df <- build_data_covariates(shot_data, 17, 2022)
+
+covariate.msm <- msm(event ~ time_elapsed,
+                       subject = game_id,
+                       data = covariate_df,
+                       qmatrix = Q,
+                       hmodel = hmod,
+                       hcovariates = list(~ athlete_id_1 + shot_dist, ~ athlete_id_1 + shot_dist))
 ```
