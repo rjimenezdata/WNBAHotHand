@@ -343,3 +343,30 @@ champs_2024.msm <- msm(event ~ time_elapsed,
 #                 qmatrix = Q,
 #                 gen.inits = T)
 ```
+
+## HMM with covariates
+
+```{r}
+build_data_covariates <- function(df, team, season){
+  shot_data |>
+    filter(team_id == team,
+           season == season,
+           qtr <= 4) |>
+    mutate(event = as.integer(case_when(
+       score_value == 0 ~ 1,
+    score_value %in% c(2, 3) ~ 2
+    )),
+    shot_dist = sqrt(coordinate_x^2 + coordinate_y^2)) |>
+    # eliminate games that have an overtime
+    # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
+    # add .1 seconds to non-unique time_elapsed values
+    select(game_id, time_elapsed, event, athlete_id_1, shot_dist) |>
+    group_by(game_id, time_elapsed) |>
+    mutate(dup_in_game = n() > 1, time_elapsed_adj = time_elapsed + (row_number() - 1) * 0.1) |>
+  ungroup() |>
+    select(-c(time_elapsed, dup_in_game)) |>
+    rename(time_elapsed = time_elapsed_adj)
+}
+
+covariate_df <- build_data_covariates(shot_data, 17, 2022)
+```
