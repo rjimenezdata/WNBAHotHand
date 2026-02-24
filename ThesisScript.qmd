@@ -356,7 +356,8 @@ build_data_covariates <- function(df, team, season){
        score_value == 0 ~ 1,
     score_value %in% c(2, 3) ~ 2
     )),
-    shot_dist = sqrt(coordinate_x^2 + coordinate_y^2)) |>
+    shot_dist = case_when(coordinate_x < 0 ~ sqrt((coordinate_x + 47)^2 + coordinate_y^2),
+                          coordinate_x >= 0 ~ sqrt((47 - coordinate_x)^2 + coordinate_y^2))) |>
     # eliminate games that have an overtime
     # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
     # add .1 seconds to non-unique time_elapsed values
@@ -375,5 +376,5 @@ covariate.msm <- msm(event ~ time_elapsed,
                        data = covariate_df,
                        qmatrix = Q,
                        hmodel = hmod,
-                       covariates = ~ shot_dist)
+                       hcovariates = list(~shot_dist, ~shot_dist))
 ```
