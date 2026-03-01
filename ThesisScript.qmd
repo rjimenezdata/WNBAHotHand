@@ -127,7 +127,7 @@ Here I want to discretize the time in my data.
 game_time_score <- shot_data |>
   filter(team_id == 17,
          season == 2022) |>
-  select(game_id, time_elapsed, score_value)
+  select(game_id, time_elapsed, score_value, athlete_id_1)
 
 discrete_times <- game_time_score |>
   select(game_id, time_elapsed) |>
@@ -148,7 +148,7 @@ df_discrete <- discrete_times |>
   # sanity check: do values in events and score_value match up?
    select(!score_value)
 
-# write.csv(df_discrete, "shots_discrete.csv")
+write.csv(df_discrete, "shots_discrete.csv")
 ```
 
 ## Look at state transition matrix
