@@ -30,12 +30,13 @@ shot_data <- pbp_data |>
          str_detect(type_text, "Free Throw") == FALSE,
          season_type %in% c(2, 3),
          # remove for-fun teams: Team Stewart, Team Wilson, Team USA, etc
-         !team_id %in% c(112530, 126287, 97, 96)) |>
+         !team_id %in% c(112530, 126287, 97, 96),
+         qtr < 5) |>
          # LV Aces team ID = 17, NY Liberty team ID = 9
   mutate(athlete_id_1 = as.factor(athlete_id_1),
          type_text = as.factor(type_text),
          time_elapsed = 2400 - end_game_seconds_remaining) |>
-  arrange(game_date)
+  arrange(game_id)
 
 #write.csv(shot_data, file = "df_shots.csv")
 ```
