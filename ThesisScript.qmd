@@ -38,7 +38,7 @@ shot_data <- pbp_data |>
          time_elapsed = 2400 - end_game_seconds_remaining) |>
   arrange(game_id)
 
-#write.csv(shot_data, file = "df_shots.csv")
+# write.csv(shot_data, file = "df_shots.csv")
 ```
 
 How to define state behaviors? Like for the transmission probabilities?

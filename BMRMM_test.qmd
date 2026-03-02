@@ -1,0 +1,29 @@
+---
+title: "BMRMM_test"
+format: html
+---
+
+```{r setup}
+library(BMRMM)
+```
+
+```{r}
+df_shots <- read.csv("df_shots.csv") |>
+  select(-X) |>
+  mutate(event = as.integer(case_when(
+       score_value == 0 ~ 1,
+    score_value %in% c(2, 3) ~ 2
+    )),
+    shot_dist = case_when(coordinate_x < 0 ~ sqrt((coordinate_x + 47)^2 + coordinate_y^2),
+                          coordinate_x >= 0 ~ sqrt((47 - coordinate_x)^2 + coordinate_y^2))) |>
+    # eliminate games that have an overtime
+    # CHANGED TO GAME_PLAY_NUMBER BECAUSE THESE ARE NON-OVERLAPPING
+    # add .1 seconds to non-unique time_elapsed values
+    select(game_id, time_elapsed, event, athlete_id_1, shot_dist, team_id) |>
+    group_by(game_id, time_elapsed) |>
+    mutate(dup_in_game = n() > 1, time_elapsed_adj = time_elapsed + (row_number() - 1) * 0.1) |>
+  ungroup() |>
+    select(-c(time_elapsed, dup_in_game)) |>
+    rename(time_elapsed = time_elapsed_adj)
+```
+
