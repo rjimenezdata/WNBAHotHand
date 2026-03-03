@@ -1,0 +1,72 @@
+---
+title: "PoissonProcess"
+format: html
+---
+
+```{r setup}
+library(tidyverse)
+library(mgcv)
+df_shots <- read.csv("df_shots.csv")
+# individual shot data
+head(df_shots)
+```
+
+
+```{r}
+# select game, team, time elapsed, score value of a shot
+game_time_score <- df_shots |>
+  filter(team_id != 17, season == 2022) |>
+  select(game_id, team_id, time_elapsed, score_value)
+
+# make discrete times:
+# group observations by game and team
+# for each game and team, find the time of the last observation
+# turn data into one observation for each second between 0 and last time observed
+discrete_times <- game_time_score |>
+  select(game_id, time_elapsed, team_id) |>
+  group_by(game_id, team_id) |>
+  summarize(max_time = max(time_elapsed)) |>
+  rowwise() |>
+  mutate(time_elapsed = list(0:max_time)) |>
+  unnest(time_elapsed)
+
+# drop max_time variable
+# join discrete times onto shot data by game and team, and time elapsed
+# if there is no shot at that time, event 1
+# if there is a 2-pt attempt, event 2
+# if there is a 3-pt attempt, event 3
+df_discrete <- discrete_times |>
+  select(!max_time) |>
+  left_join(game_time_score,
+            by = join_by(game_id, team_id, time_elapsed)) |>
+  mutate(event = case_when(score_value == 0 ~ 2,
+                           score_value %in% c(2, 3) ~ 3)) |>
+  # sanity check: do values in events and score_value match up?
+   replace_na(list(event = 1)) |>
+  # sanity check: do values in events and score_value match up?
+   select(!score_value)
+```
+
+
+```{r}
+# bin by every 2 mins:
+bin_width <- 120
+
+
+binned_shot_data <- df_discrete |>
+  mutate(bin = ceiling(time_elapsed/bin_width),
+         attempt_2 = (event == 2),
+         attempt_3 = (event == 3)) |>
+  filter(bin > 0) |>
+  group_by(bin) |>
+  summarize(y = sum(attempt_2)) 
+binned_shot_data$bin_width <- bin_width
+binned_shot_data$centroid <- (binned_shot_data$bin*120 + (binned_shot_data$bin - 1)*120)/2
+
+fit_sp_gam <- gam(y ~ s(centroid, bs = "tp", k = 19) + offset(log(bin_width)),
+                  family = poisson(),
+                  method = "REML",
+                  data = binned_shot_data)
+summary(fit_sp_gam)
+```
+
