@@ -5,6 +5,7 @@ format: html
 
 ```{r setup}
 library(BMRMM)
+library(tidyverse)
 ```
 
 ```{r}
@@ -25,5 +26,16 @@ df_shots <- read.csv("df_shots.csv") |>
   ungroup() |>
     select(-c(time_elapsed, dup_in_game)) |>
     rename(time_elapsed = time_elapsed_adj)
+```
+
+```{r}
+bmrmm_test <- df_shots |>
+  filter(team_id == 17) |>
+  select(-c(team_id, time_elapsed)) |>
+  mutate(game_id = as.numeric(as.factor(game_id)),
+         past_event = lag(event)) |>
+  select(game_id, athlete_id_1, shot_dist, past_event, event)
+
+m1 <- BMRMM(bmrmm_test, num.cov = 2, simsize = 50)
 ```
 
