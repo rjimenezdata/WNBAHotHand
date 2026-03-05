@@ -63,10 +63,11 @@ binned_shot_data <- df_discrete |>
 binned_shot_data$bin_width <- bin_width
 binned_shot_data$centroid <- (binned_shot_data$bin*120 + (binned_shot_data$bin - 1)*120)/2
 
-fit_sp_gam <- gam(y ~ s(centroid, bs = "tp", k = 19) + offset(log(bin_width)),
+fit_sp_gam <- gam(y ~ s(centroid, bs = "tp", k = 19) +  + offset(log(bin_width)),
                   family = poisson(),
                   method = "REML",
                   data = binned_shot_data)
 summary(fit_sp_gam)
+plot(fit_sp_gam)
 ```
 
