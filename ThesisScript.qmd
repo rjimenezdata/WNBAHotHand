@@ -40,6 +40,9 @@ shot_data <- pbp_data |>
                           coordinate_x >= 0 ~ sqrt((47 - coordinate_x)^2 + coordinate_y^2))) |>
   arrange(game_id)
 
+shot_data |>
+  ggplot(aes(x = shot_dist)) + geom_density()
+
 # write.csv(shot_data, file = "df_shots.csv")
 ```
 
