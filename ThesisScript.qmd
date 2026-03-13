@@ -25,9 +25,9 @@ pbp_data <- load_wnba_pbp(seasons = season_years)
 The Las Vegas Aces won the championship in 2022. The Las Vegas Aces won the championship in 2023. The New York Liberty won the championship in 2024. These are the teams we are interested in investigating, but I am open to looking at other teams too. How does including all teams vs. including only winning teams in the data play out?
 
 ```{r}
-# sample_data <- pbp_data |>
+# full_data <- pbp_data |>
 #   select(1:4)
-#write.csv(sample_data, "sample_data.csv")
+# write.csv(full_data, "full_data.csv")
 shot_data <- pbp_data |>
   filter(shooting_play == TRUE,
          str_detect(type_text, "Free Throw") == FALSE,
