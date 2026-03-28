@@ -4,15 +4,15 @@ format: html
 ---
 
 ```{r setup}
-library(tidyverse)
 library(mgcv)
 library(depmixS4)
+library(tidyverse)
 df_shots <- read.csv("df_shots.csv") |>
-  select(-X)
+  dplyr::select(-X)
 # individual shot data
 head(df_shots)
 shots_discrete <- read.csv("shots_discrete.csv") |>
-  select(-X)
+  dplyr::select(-X)
 ```
 
 
@@ -76,28 +76,37 @@ plot(fit_sp_gam)
 ```
 
 ```{r}
+# create dataset of poisson distributed points scored
 poisson_shots <- df_shots |>
   mutate(
   athlete_id_1 = as.factor(athlete_id_1),
   game_id = as.factor(game_id)
   ) |>
-  filter(team_id == 16,
+  # filter down to only a single team's games
+  filter(team_id == 17,
          qtr < 5,
-         !is.na(athlete_id_1)) |>
+         !is.na(athlete_id_1),
+         season == 2022) |>
   group_by(game_id) |>
+  # create an iterative score variable that updates with each shot
   mutate(team_score = cumsum(score_value)) |>
   ungroup() |>
-  select(athlete_id_1, score_value, shot_dist, season, game_id, time_elapsed)
+  dplyr::select(athlete_id_1, score_value, shot_dist, season, game_id, time_elapsed)
 
+# create table where each entry is number of shots in a game
 game_obslength <- poisson_shots |>
   group_by(game_id) |>
+  # count number of shots by game
   summarize(n = n())
 
+# create vector of game shot attempts from previous table
 game_obslength_vec <- game_obslength[,2] |>
   as.vector()
 
+# create new table where event value is given by score outcome for multinomial model use
 multinomial_shots <- df_shots |>
   mutate(event_value = as.factor(case_when(
+    # (3 point make = 4, 3 point miss = 3, 2 point make = 2, 2 point miss = 1)
     str_detect(text, "three point") & scoring_play ~ 4,
     str_detect(text, "three point") & !scoring_play ~ 3,
     !str_detect(text, "three point") & scoring_play ~ 2,
@@ -105,46 +114,118 @@ multinomial_shots <- df_shots |>
   )),
   athlete_id_1 = as.factor(athlete_id_1),
   game_id = as.factor(game_id)) |>
-  filter(team_id == 16,
+  filter(team_id == 17,
          qtr < 5,
-         !is.na(athlete_id_1)) |>
+         !is.na(athlete_id_1),
+         season == 2022) |>
   group_by(game_id) |>
   mutate(team_score = cumsum(score_value)) |>
   ungroup() |>
-  select(athlete_id_1, shot_dist, event_value, season, game_id, time_elapsed)
+  dplyr::select(athlete_id_1, shot_dist, event_value, season, game_id, time_elapsed)
 
+# create new table where event value is given by success/fail for binomial model use
 binomial_shots <- df_shots |>
   mutate(shot_made = if_else(
+    # 1 = make, 0 = miss
    score_value == 0,
    0,
    1
   ),
   athlete_id_1 = as.factor(athlete_id_1),
   game_id = as.factor(game_id)) |>
-  filter(team_id == 16,
+  filter(team_id == 17,
          qtr < 5,
-         !is.na(athlete_id_1)) |>
+         !is.na(athlete_id_1),
+         season == 2022) |>
   group_by(game_id) |>
   mutate(team_score = cumsum(score_value)) |>
-  ungroup() |>
-  select(athlete_id_1, shot_dist, shot_made, season, game_id, time_elapsed)
+  ungroup()
+```
 
-
+```{r}
+#| warning: false
+# fit hmm with poisson family component
 mod <- depmix(score_value~shot_dist, nstates = 2, family=poisson(), ntimes = game_obslength_vec[[1]], data = poisson_shots)
 fitted.mod <- fit(mod)
+# see posterior parameter estimates
 summary(fitted.mod)
+logLik(fitted.mod)
+# see numerically optimized state sequence
 posterior(fitted.mod)$state
+# NOT USEFUL AT ALL WTF
 plot(posterior(fitted.mod)$state, type = "l",
      ylab = "Hidden State",
      xlab = "Time",
      main = "Estimated Hidden States Over Time")
+# see state probability at each observation -- Poisson model seems to do the worst
+forwardbackward(fitted.mod)$gamma
+```
 
+```{r}
 mod2 <- depmix(event_value ~ shot_dist, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
 fitted.mod2 <- fit(mod2)
 summary(fitted.mod2)
+logLik(fitted.mod2)
+forwardbackward(fitted.mod2)$gamma
+posterior(fitted.mod2)$state
 
+mod2.5 <- depmix(event_value ~ shot_dist, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+fitted.mod2.5 <- fit(mod2.5)
+summary(fitted.mod2.5)
+logLik(fitted.mod2.5)
+forwardbackward(fitted.mod2.5)$gamma
+posterior(fitted.mod2.5)$state
+```
+
+```{r}
+#| warning: false
+# the best model so far:
 mod3 <- depmix(shot_made ~ shot_dist + athlete_id_1, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
 fitted.mod3 <- fit(mod3)
 summary(fitted.mod3)
+logLik(fitted.mod3)
+forwardbackward(fitted.mod3)$gamma
+posterior(fitted.mod3)$state
+plot(posterior(fitted.mod3)$state, type = "l",
+     ylab = "Hidden State",
+     xlab = "Time",
+     main = "Estimated Hidden States Over Time")
+
+
+
+
+
+
+mod3.5 <- depmix(shot_made ~ shot_dist + athlete_id_1, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+fitted.mod3.5 <- fit(mod3.5)
+summary(fitted.mod3.5)
+logLik(fitted.mod3.5)
+forwardbackward(fitted.mod3.5)$gamma
+posterior(fitted.mod3.5)$state
+
+mod4 <- depmix(shot_made ~ shot_dist, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+fitted.mod4 <- fit(mod4)
+summary(fitted.mod4)
+logLik(fitted.mod4)
+forwardbackward(fitted.mod4)$gamma
+posterior(fitted.mod4)$state
+AIC(fitted.mod4)
+
+mod5 <- depmix(shot_made ~ shot_dist + time_elapsed, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+fitted.mod5 <- fit(mod5)
+summary(fitted.mod5)
+logLik(fitted.mod5)
+AIC(fitted.mod5)
+
+binmodfull <- depmix(shot_made ~ shot_dist + time_elapsed + athlete_id_1, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+fitted.modfull <- fit(binmodfull)
+summary(fitted.modfull)
+logLik(fitted.modfull)
+AIC(fitted.modfull)
+
+nullmod <- depmix(shot_made ~ 1, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+fitted.nullmod <- fit(nullmod)
+summary(fitted.nullmod)
+logLik(fitted.nullmod)
 ```
 
