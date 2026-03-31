@@ -405,3 +405,9 @@ covariate.msm <- msm(event ~ time_elapsed,
                        hmodel = hmod,
                        hcovariates = list(~shot_dist, ~shot_dist))
 ```
+
+## Final mmHMMbayes attempt
+
+```{r}
+mHMM()
+```
