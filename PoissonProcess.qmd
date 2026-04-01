@@ -138,8 +138,10 @@ binomial_shots <- df_shots |>
          !is.na(athlete_id_1),
          season == 2022) |>
   group_by(game_id) |>
-  mutate(team_score = cumsum(score_value)) |>
-  ungroup()
+  mutate(team_score = cumsum(score_value),
+         time_btwn_shots = time_elapsed - lag(time_elapsed)) |>
+  ungroup() |>
+  mutate(time_btwn_shots = replace_na(time_btwn_shots, 0))
 ```
 
 ```{r}
@@ -212,7 +214,7 @@ forwardbackward(fitted.mod4)$gamma
 posterior(fitted.mod4)$state
 AIC(fitted.mod4)
 
-mod5 <- depmix(shot_made ~ shot_dist + time_elapsed, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+mod5 <- depmix(shot_made ~ shot_dist + time_btwn_shots, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
 fitted.mod5 <- fit(mod5)
 summary(fitted.mod5)
 logLik(fitted.mod5)
@@ -242,8 +244,8 @@ AIC(fitted.binmod2states)
 
 fits <- lapply(1:10, function(i) {
   set.seed(i)
-  mod <- depmix(shot_made ~ shot_dist + time_elapsed + athlete_id_1, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
-  fit(mod, emcontrol = em.control(random.start = TRUE))
+  mod <- depmix(shot_made ~ shot_dist + time_btwn_shots, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 })
 
 best_fit <- fits[[which.max(sapply(fits, logLik))]]
