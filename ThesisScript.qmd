@@ -8,9 +8,11 @@ editor: visual
 ## Load essential libraries
 
 ```{r setup}
+library(depmixS4)
 library(tidyverse)
 library(wehoop)
 library(msm)
+
 ```
 
 ## Load in 2022-2024 data from wehoop package
@@ -135,27 +137,33 @@ Here I want to discretize the time in my data.
 game_time_score <- shot_data |>
   filter(team_id == 17,
          season == 2022) |>
-  select(game_id, time_elapsed, score_value, athlete_id_1)
+  dplyr::select(game_id, time_elapsed, score_value, athlete_id_1, shot_dist) |>
+  group_by(game_id, time_elapsed) |>
+  slice_tail(n = 1) |>   # keep the last shot in that second
+  ungroup()
 
 discrete_times <- game_time_score |>
-  select(game_id, time_elapsed) |>
+  dplyr::select(game_id, time_elapsed) |>
   group_by(game_id) |>
   summarize(max_time = max(time_elapsed)) |>
   rowwise() |>
   mutate(time_elapsed = list(0:max_time)) |>
   unnest(time_elapsed)
 
-df_discrete <- discrete_times |>
-  select(!max_time) |>
+df_discrete_lv2022 <- discrete_times |>
+  dplyr::select(!max_time) |>
   left_join(game_time_score,
             by = join_by(game_id, time_elapsed)) |>
-  mutate(event = case_when(score_value == 0 ~ 2,
-                           score_value %in% c(2, 3) ~ 3)) |>
+  mutate(event = case_when(score_value == 0 ~ 0,
+                           score_value == 2 ~ 2,
+                           score_value == 3 ~ 3),
+         game_id = as.factor(game_id)) |>
   # sanity check: do values in events and score_value match up?
    replace_na(list(event = 1)) |>
   # sanity check: do values in events and score_value match up?
-   select(!score_value)
-
+   dplyr::select(!score_value) |>
+  mutate(athlete_id_1 = as.factor(replace_na(as.character(athlete_id_1), "0")),
+         shot_dist = replace_na(shot_dist, 0))
 # write.csv(df_discrete, "shots_discrete.csv")
 ```
 
@@ -406,8 +414,23 @@ covariate.msm <- msm(event ~ time_elapsed,
                        hcovariates = list(~shot_dist, ~shot_dist))
 ```
 
-## Final mmHMMbayes attempt
+## Discretized time depmixS4
 
 ```{r}
-mHMM()
+# create new table where event value is given by score outcome for multinomial model use
+
+game_obslength <- df_discrete_lv2022 |>
+  group_by(game_id) |>
+  # count number of shots by game
+  summarize(n = n())
+
+# create vector of game shot attempts from previous table
+game_obslength_vec <- game_obslength[,2] |>
+  as.vector()
+
+fits <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event ~ shot_dist + time_btwn_shots, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
 ```
