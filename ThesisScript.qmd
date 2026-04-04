@@ -430,17 +430,28 @@ game_obslength_vec <- game_obslength[,2] |>
   as.vector()
 
 
+# RESULTS:
+# AIC = 4656.359
+# 460 instances of state 1, 2 instances of state 2
 fits <- depmix(event ~ shot_dist, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = df_discrete_lv2022)
 
 fitmod <- fit(fits, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 
 summary(fitmod)
-posterior(fitmod)$state
+mostlikelyseq <- posterior(fitmod)$state
+with(rle(mostlikelyseq), tapply(lengths, values, FUN = max))
+AIC(fitmod)
 
+
+# RESULTS:
+# AIC = 4672.647
+# 2 instances of state 1, 2 instances of state 2, 331 instances of state 3
 fits2 <- depmix(event ~ shot_dist, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = df_discrete_lv2022)
 
 fitmod2 <- fit(fits2, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 
 summary(fitmod2)
-posterior(fitmod2)$state
+mostlikelyseq2 <- posterior(fitmod2)$state
+with(rle(mostlikelyseq2), tapply(lengths, values, FUN = max))
+AIC(fitmod2)
 ```
