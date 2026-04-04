@@ -141,19 +141,21 @@ binomial_shots <- df_shots |>
   mutate(team_score = cumsum(score_value),
          time_btwn_shots = time_elapsed - lag(time_elapsed)) |>
   ungroup() |>
-  mutate(time_btwn_shots = replace_na(time_btwn_shots, 0))
+  mutate(time_btwn_shots = replace_na(time_btwn_shots, 0)) |>
+  dplyr::select(athlete_id_1, shot_dist, shot_made, score_value, season, game_id, time_elapsed)
 ```
 
 ```{r}
 #| warning: false
 # fit hmm with poisson family component
-mod <- depmix(team_score~shot_dist, nstates = 2, family=poisson(), ntimes = game_obslength_vec[[1]], data = poisson_shots)
+mod <- depmix(score_value~shot_dist, nstates = 2, family=poisson(), ntimes = game_obslength_vec[[1]], data = poisson_shots)
 fitted.mod <- fit(mod)
 # see posterior parameter estimates
 summary(fitted.mod)
 logLik(fitted.mod)
 # see numerically optimized state sequence
-posterior(fitted.mod)$state
+modstateseq <- posterior(fitted.mod)$state
+cbind(poisson_shots, modstateseq)
 # NOT USEFUL AT ALL WTF
 plot(posterior(fitted.mod)$state, type = "l",
      ylab = "Hidden State",
@@ -161,22 +163,55 @@ plot(posterior(fitted.mod)$state, type = "l",
      main = "Estimated Hidden States Over Time")
 # see state probability at each observation -- Poisson model seems to do the worst
 forwardbackward(fitted.mod)$gamma
+
+tmod <- depmix(score_value~shot_dist, transition = ~shot_dist, nstates = 2, family=poisson(), ntimes = game_obslength_vec[[1]], data = poisson_shots)
+fitted.tmod <- fit(tmod)
+summary(fitted.tmod)
+
+mod.5 <- depmix(score_value~shot_dist, nstates = 3, family=poisson(), ntimes = game_obslength_vec[[1]], data = poisson_shots)
+fitted.mod.5 <- fit(mod.5)
+summary(fitted.mod.5)
+logLik(fitted.mod.5)
+
+tmod.5 <- depmix(score_value~shot_dist, transition = ~shot_dist, nstates = 3, family=poisson(), ntimes = game_obslength_vec[[1]], data = poisson_shots)
+fitted.tmod.5 <- fit(tmod.5)
+summary(fitted.tmod.5)
 ```
 
 ```{r}
+nmod2 <- depmix(event_value ~ 1, transition = ~1, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+fitted.nmod2 <- fit(nmod2)
+summary(fitted.nmod2)
+nmod2.seq <- posterior(fitted.nmod2)$state
+logLik(fitted.nmod2)
+AIC(fitted.nmod2)
+cbind(multinomial_shots, nmod2.seq) |>
+  group_by(nmod2.seq) |>
+  summarize(n = n())
+
 mod2 <- depmix(event_value ~ shot_dist, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
 fitted.mod2 <- fit(mod2)
 summary(fitted.mod2)
 logLik(fitted.mod2)
+AIC(fitted.mod2)
 forwardbackward(fitted.mod2)$gamma
-posterior(fitted.mod2)$state
+mod2.seq <- posterior(fitted.mod2)$state
+cbind(multinomial_shots, mod2.seq)
 
 mod2.5 <- depmix(event_value ~ shot_dist, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
 fitted.mod2.5 <- fit(mod2.5)
 summary(fitted.mod2.5)
 logLik(fitted.mod2.5)
 forwardbackward(fitted.mod2.5)$gamma
-posterior(fitted.mod2.5)$state
+AIC(fitted.mod2.5)
+mod3.seq <- posterior(fitted.mod2.5)$state
+cbind(multinomial_shots, mod3.seq)
+
+tmod2 <- depmix(event_value ~ 1, transition = ~shot_dist, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+fitted.tmod2 <- fit(tmod2)
+summary(fitted.tmod2)
+logLik(fitted.tmod2)
+AIC(fitted.tmod2)
 ```
 
 ```{r}
@@ -186,8 +221,10 @@ mod3 <- depmix(shot_made ~ shot_dist + athlete_id_1, nstates = 3, family=binomia
 fitted.mod3 <- fit(mod3)
 summary(fitted.mod3)
 logLik(fitted.mod3)
+AIC(fitted.mod3)
 forwardbackward(fitted.mod3)$gamma
-posterior(fitted.mod3)$state
+seq.mod3 <- posterior(fitted.mod3)$state
+cbind(binomial_shots, seq.mod3)
 plot(posterior(fitted.mod3)$state, type = "l",
      ylab = "Hidden State",
      xlab = "Time",
@@ -204,7 +241,13 @@ summary(fitted.mod3.5)
 logLik(fitted.mod3.5)
 AIC(fitted.mod3.5)
 forwardbackward(fitted.mod3.5)$gamma
-posterior(fitted.mod3.5)$state
+seq.mod3.5 <- posterior(fitted.mod3.5)$state
+cbind(binomial_shots, seq.mod3.5)
+cbind(binomial_shots, seq.mod3.5) |>
+  group_by(seq.mod3.5) |>
+  summarize(shot_prop = mean(shot_made),
+            n = n(),
+            avg_shotdist = median(shot_dist))
 
 mod4 <- depmix(shot_made ~ shot_dist, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
 fitted.mod4 <- fit(mod4)
@@ -226,10 +269,17 @@ summary(fitted.modfull)
 logLik(fitted.modfull)
 AIC(fitted.modfull)
 
-nullmod <- depmix(shot_made ~ 1, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+nullmod <- depmix(shot_made ~ 1, transition = ~1, nstates = 3, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
 fitted.nullmod <- fit(nullmod)
 summary(fitted.nullmod)
 logLik(fitted.nullmod)
+cbind(binomial_shots, posterior(fitted.nullmod)$state)
+
+nullmod2 <- depmix(shot_made ~ 1, transition = ~1, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+fitted.nullmod2 <- fit(nullmod2)
+summary(fitted.nullmod2)
+logLik(fitted.nullmod2)
+cbind(binomial_shots, posterior(fitted.nullmod2)$state)
 
 binmod2states <- depmix(shot_made ~ shot_dist + time_elapsed + athlete_id_1, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
 fitted.binmod2states <- fit(binmod2states)
@@ -244,11 +294,11 @@ AIC(fitted.binmod2states)
 
 fits <- lapply(1:10, function(i) {
   set.seed(i)
-  mod <- depmix(shot_made ~ shot_dist + time_btwn_shots, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
+  mod <- depmix(shot_made ~ shot_dist, nstates = 2, family=binomial(), ntimes = game_obslength_vec[[1]], data = binomial_shots)
   fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 })
 
-best_fit <- fits[[which.max(sapply(fits, logLik))]]
+best_fit <- fits[[which.min(sapply(fits, AIC))]]
 
 fits <- lapply(1:10, function(i) {
   set.seed(i)
@@ -256,7 +306,7 @@ fits <- lapply(1:10, function(i) {
   fit(mod, emcontrol = em.control(random.start = TRUE))
 })
 
-best_fit2 <- fits[[which.max(sapply(fits, logLik))]]
+best_fit2 <- fits[[which.min(sapply(fits, AIC))]]
 
 fits <- lapply(1:10, function(i) {
   set.seed(i)
@@ -264,7 +314,7 @@ fits <- lapply(1:10, function(i) {
   fit(mod, emcontrol = em.control(random.start = TRUE))
 })
 
-best_fit3 <- fits[[which.max(sapply(fits, logLik))]]
+best_fit3 <- fits[[which.min(sapply(fits, AIC))]]
 posterior(best_fit3)$state
 
 fits <- lapply(1:10, function(i) {
@@ -273,9 +323,9 @@ fits <- lapply(1:10, function(i) {
   fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 })
 
-best_fit4 <- fits[[which.max(sapply(fits, logLik))]]
+best_fit4 <- fits[[which.min(sapply(fits, AIC))]]
 forwardbackward(best_fit4)$gamma
-posterior(best_fit4)$state
+cbind(binomial_shots, posterior(best_fit4)$state)
 plot(posterior(best_fit4)$state)
 summary(best_fit4)
 
@@ -285,7 +335,7 @@ fits <- lapply(1:10, function(i) {
   fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 })
 
-best_fit5 <- fits[[which.max(sapply(fits, logLik))]]
+best_fit5 <- fits[[which.min(sapply(fits, AIC))]]
 
 fits <- lapply(1:50, function(i) {
   set.seed(i)
@@ -293,7 +343,7 @@ fits <- lapply(1:50, function(i) {
   fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 })
 
-best_fit6 <- fits[[which.max(sapply(fits, logLik))]]
+best_fit6 <- fits[[which.min(sapply(fits, AIC))]]
 
 fits <- lapply(1:50, function(i) {
   set.seed(i)
@@ -301,15 +351,20 @@ fits <- lapply(1:50, function(i) {
   fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
 })
 
-best_fit7 <- fits[[which.max(sapply(fits, logLik))]]
+best_fit7 <- fits[[which.min(sapply(fits, AIC))]]
 summary(best_fit7)
 posterior(best_fit7)$state
 actual.vs.pred <- cbind(binomial_shots, as.tibble(posterior(best_fit7)$state))
 
+best_fit
+best_fit2
+best_fit3
+best_fit4
+best_fit5
+best_fit6
+best_fit7
+# model 4 is the best. Has the greatest log likelihood and lowest AIC
 
-llratio(best_fit4, best_fit5)
-llratio(best_fit, best_fit2)
-llratio(best_fit3, best_fit7)
 
 ```
 
