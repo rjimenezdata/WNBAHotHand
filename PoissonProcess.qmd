@@ -368,3 +368,90 @@ best_fit7
 
 ```
 
+
+```{r}
+
+fits0 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ 1, transition = ~1, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits2 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist + athlete_id_1, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits3 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist + time_elapsed, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits4 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist + athlete_id_1 + time_elapsed, nstates = 2, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits5 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ 1, transition = ~1, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits6 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits7 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist + athlete_id_1, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits8 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist + time_elapsed, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+fits9 <- lapply(1:10, function(i) {
+  set.seed(i)
+  mod <- depmix(event_value ~ shot_dist + athlete_id_1 + time_elapsed, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = multinomial_shots)
+  fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+})
+
+best_fit <- fits[[which.min(sapply(fits0, AIC))]]
+best_fit2 <- fits[[which.min(sapply(fits, AIC))]]
+best_fit3 <- fits[[which.min(sapply(fits2, AIC))]]
+best_fit4 <- fits[[which.min(sapply(fits3, AIC))]]
+best_fit5 <- fits[[which.min(sapply(fits4, AIC))]]
+best_fit6 <- fits[[which.min(sapply(fits5, AIC))]]
+best_fit7 <- fits[[which.min(sapply(fits6, AIC))]]
+best_fit8 <- fits[[which.min(sapply(fits7, AIC))]]
+best_fit9 <- fits[[which.min(sapply(fits8, AIC))]]
+best_fit10 <- fits[[which.min(sapply(fits9, AIC))]]
+
+best_fit
+best_fit2
+best_fit3
+best_fit4
+best_fit5
+best_fit6
+best_fit7
+best_fit8
+best_fit9
+best_fit10
+
+```
+
