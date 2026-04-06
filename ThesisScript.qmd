@@ -440,25 +440,16 @@ best_fit <- fits[[which.min(logliks)]]$model
 summary(best_fit)
 logLik(best_fit)
 
-fitmod <- fit(fits, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
+fits2 <- lapply(seeds, function(i) {
+  set.seed(i)
+  mod <- depmix(event ~ shot_dist + athlete_id_1 + time_elapsed, nstates = 2, family =multinomial(), ntimes = game_obslength$n, data = df_discrete_lv2022)
+  fitted_mod <- fit(mod, emcontrol = em.control(random.start = F, maxit = 2000, tol = 1e-8))
+  list(model = fitted_mod, seed = i)
+})
 
-summary(fitmod)
-mostlikelyseq <- posterior(fitmod)$state
-with(rle(mostlikelyseq), tapply(lengths, values, FUN = max))
-logLik(fitmod)
+logliks2 <- sapply(fits2, function(x) logLik(x$model))
+best_fit2 <- fits2[[which.min(logliks2)]]$model
+summary(best_fit2)
+logLik(best_fit2)
 
-
-# RESULTS:
-# negative log likelihood = -2226.701
-# longest sequence of state 1: 344
-# longest sequence of state 2: 2
-# longest sequence of state 3: 2
-fits2 <- depmix(event ~ shot_dist + athlete_id_1, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = df_discrete_lv2022)
-
-fitmod2 <- fit(fits2, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
-
-summary(fitmod2)
-mostlikelyseq2 <- posterior(fitmod2)$state
-with(rle(mostlikelyseq2), tapply(lengths, values, FUN = max))
-logLik(fitmod2)
 ```
