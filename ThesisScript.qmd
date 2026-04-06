@@ -411,7 +411,7 @@ covariate.msm <- msm(event ~ time_elapsed,
 
 ```{r}
 # create new table where event value is given by score outcome for multinomial model use
-
+set.seed(123)
 game_obslength <- df_discrete_lv2022 |>
   group_by(game_id) |>
   # count number of shots by game
@@ -427,7 +427,8 @@ game_obslength_vec <- game_obslength[,2] |>
 # longest sequence of state 1: 2
 # longest sequence of state 2: 449
 
-fits <- lapply(1:10, function(i) {
+seeds <- runif(10, 0, 9999999)
+fits <- lapply(seeds, function(i) {
   set.seed(i)
   mod <- depmix(event ~ shot_dist + athlete_id_1 + time_elapsed, nstates = 3, family=multinomial(), ntimes = game_obslength_vec[[1]], data = df_discrete_lv2022)
   fitted_mod <- fit(mod, emcontrol = em.control(random.start = TRUE, maxit = 2000, tol = 1e-8))
