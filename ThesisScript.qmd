@@ -452,4 +452,27 @@ best_fit2 <- fits2[[which.min(logliks2)]]$model
 summary(best_fit2)
 logLik(best_fit2)
 
+fits3 <- lapply(seeds, function(i) {
+  set.seed(i)
+  mod <- depmix(event ~ 1, nstates = 2, family =multinomial(), ntimes = game_obslength$n, data = df_discrete_lv2022)
+  fitted_mod <- fit(mod, emcontrol = em.control(random.start = F, maxit = 2000, tol = 1e-8))
+  list(model = fitted_mod, seed = i)
+})
+logliks3 <- sapply(fits3, function(x) logLik(x$model))
+best_fit3 <- fits3[[which.min(logliks3)]]$model
+summary(best_fit3)
+logLik(best_fit3)
+posterior(best_fit3)$state
+
+fits4 <- lapply(seeds, function(i) {
+  set.seed(i)
+  mod <- depmix(event ~ 1, nstates = 3, family =multinomial(), ntimes = game_obslength$n, data = df_discrete_lv2022)
+  fitted_mod <- fit(mod, emcontrol = em.control(random.start = T, maxit = 2000, tol = 1e-8))
+  list(model = fitted_mod, seed = i)
+})
+logliks4 <- sapply(fits4, function(x) logLik(x$model))
+best_fit4 <- fits3[[which.min(logliks4)]]$model
+summary(best_fit4)
+logLik(best_fit4)
+posterior(best_fit4)$state
 ```
