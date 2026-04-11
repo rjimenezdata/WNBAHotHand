@@ -81,22 +81,151 @@ streak_stats = function(results_sequence, streak_length){
                     #                     longest_run_failure,
   ))
 }
+
+# For only Sstreak - Fstreak
+phat_Sstreak_Fstreak <- function(results_sequence, streak_length){
+  n_trials = length(results_sequence)
+  n_success = sum(results_sequence)
+  
+  run_lengths = rle(results_sequence)$lengths
+  if_run_success = rle(results_sequence)$values
+  
+  # successes after streaks of Successes
+  run_lengths_adj = run_lengths - streak_length + 1
+  run_values_adj_S =
+    if_run_success *
+    (!((if_run_success == 1) &
+         (run_lengths < streak_length)))
+  n_after_Sstreak = sum(run_lengths_adj * run_values_adj_S) -
+    run_values_adj_S[length(run_values_adj_S)]
+  n_success_after_Sstreak = sum((run_lengths - streak_length) * run_values_adj_S)
+  
+  # successes after streaks of Failures
+  run_values_adj_F =
+    (1-if_run_success) *
+    (!((if_run_success == 0) &
+         (run_lengths < streak_length)))
+  n_after_Fstreak = sum(run_lengths_adj * run_values_adj_F) -
+    run_values_adj_F[length(run_values_adj_F)]
+  n_success_after_Fstreak = n_after_Fstreak -
+    sum((run_lengths - streak_length) * run_values_adj_F)
+  
+  phat_after_Sstreak = n_success_after_Sstreak / n_after_Sstreak
+  phat_after_Fstreak = n_success_after_Fstreak / n_after_Fstreak
+  phat_Sstreak_vs_Fstreak = phat_after_Sstreak - phat_after_Fstreak
+  
+  phat_Sstreak_vs_Fstreak
+  
+}
+
+# For only Sstreak
+phat_Sstreak <- function(results_sequence, streak_length){
+  
+  n_trials = length(results_sequence)
+  n_success = sum(results_sequence)
+  
+  run_lengths = rle(results_sequence)$lengths
+  if_run_success = rle(results_sequence)$values
+  
+  # successes after streaks of Successes
+  run_lengths_adj = run_lengths - streak_length + 1
+  run_values_adj_S =
+    if_run_success *
+    (!((if_run_success == 1) &
+         (run_lengths < streak_length)))
+  n_after_Sstreak = sum(run_lengths_adj * run_values_adj_S) -
+    run_values_adj_S[length(run_values_adj_S)]
+  n_success_after_Sstreak = sum((run_lengths - streak_length) * run_values_adj_S)
+  
+  phat_after_Sstreak = n_success_after_Sstreak / n_after_Sstreak
+  phat_after_Sstreak
+}
 ```
 
 ```{r}
+set.seed(619)
+
+# grab one season data
+pull_list_games <- function(shots_df, TEAMID, SEASON){
+  shots_df |>
+    filter(team_id == TEAMID,
+         season == SEASON) |>
+  mutate(shot_made = as.integer(scoring_play)) |>
+  select(game_id, time_elapsed, shot_made) |>
+    group_by(game_id) |>
+    group_split()
+}
+
+# grab lv 2022, lv 2023, ny 2024 (champs each season)
+lv_2022_games <- pull_list_games(df_shots, 17, 2022)
+lv_2023_games <- pull_list_games(df_shots, 17, 2023)
+ny_2024_games <- pull_list_games(df_shots, 9, 2024)
+
+# number of permutations to run for each game
+n_trials <- 10000
+
+# iterate over all games in the list
+# take a random permutation of the shots in game, compute statistic
+perm_stats_2022 <- lv_2022_games |> map(~replicate(
+    n_trials,
+    phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
+  )
+)
+
+# plot all the games
+map(perm_stats_2022, hist)
+results_2022 <- tibble(
+  game_id = map_int(lv_2022_games, ~ .x$game_id[1]),
+  observed = map_dbl(lv_2022_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
+  perm_dist = perm_stats_2022
+) |>
+  mutate(
+    p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
+  )
+
+results_2022
 df_shots |>
-  filter(team_id == 17,
-         season == 2022,
-         game_id == 401391652) |>
-  mutate(shot_made = case_when(
-    score_value == 2 | score_value == 3 ~ 1,
-    score_value == 0 ~ 0
-  )) |>
-  pull(shot_made) |>
-  streak_stats(3) |>
-  mutate(game_id = 401391652) |>
-  relocate(game_id)
-
-
+  filter(game_id == 401391828, team_id == 17)
 ```
 
+```{r}
+perm_stats_2023 <- lv_2023_games |> map(~replicate(
+    n_trials,
+    phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
+  )
+)
+
+# plot all the games
+map(perm_stats_2023, hist)
+results_2023 <- tibble(
+  game_id = map_int(lv_2023_games, ~ .x$game_id[1]),
+  observed = map_dbl(lv_2023_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
+  perm_dist = perm_stats_2023
+) |>
+  mutate(
+    p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
+  )
+
+results_2023
+```
+
+```{r}
+perm_stats_2024 <- ny_2024_games |> map(~replicate(
+    n_trials,
+    phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
+  )
+)
+
+# plot all the games
+map(perm_stats_2024, hist)
+results_2024 <- tibble(
+  game_id = map_int(ny_2024_games, ~ .x$game_id[1]),
+  observed = map_dbl(ny_2024_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
+  perm_dist = perm_stats_2024
+) |>
+  mutate(
+    p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
+  )
+
+results_2024
+```
