@@ -183,7 +183,15 @@ results_2022 <- tibble(
     p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
   )
 
-results_2022
+results_2022 |>
+  pull(p_value) |>
+  hist()
+
+results_2022 |>
+  pull(p_value) |>
+  p.adjust("hochberg")
+
+
 df_shots |>
   filter(game_id == 401391828, team_id == 17)
 ```
@@ -206,7 +214,13 @@ results_2023 <- tibble(
     p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
   )
 
-results_2023
+results_2023 |>
+  pull(p_value) |>
+  hist()
+
+results_2023 |>
+  pull(p_value) |>
+  p.adjust("hochberg")
 ```
 
 ```{r}
@@ -227,5 +241,11 @@ results_2024 <- tibble(
     p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
   )
 
-results_2024
+results_2024 |>
+  pull(p_value) |>
+  hist()
+
+results_2024 |>
+  pull(p_value) |>
+  p.adjust(method = "hochberg")
 ```
