@@ -188,12 +188,9 @@ results_2022 |>
   hist()
 
 results_2022 |>
-  pull(p_value) |>
-  p.adjust("hochberg")
+  mutate(p_adj = p.adjust(p_value, "BH"))
 
 
-df_shots |>
-  filter(game_id == 401391828, team_id == 17)
 ```
 
 ```{r}
@@ -220,9 +217,7 @@ results_2023 |>
   hist()
 
 results_2023 |>
-  pull(p_value) |>
-  na.omit() |>
-  p.adjust("hochberg")
+  mutate(p_adj = p.adjust(p_value, "BH"))
 
 results_2023 |>
   mutate(
@@ -256,8 +251,7 @@ results_2024 |>
   hist()
 
 results_2024 |>
-  pull(p_value) |>
-  p.adjust(method = "hochberg")
+  mutate(p_adj = p.adjust(p_value, "BH"))
 
 results_2024 |>
   mutate(
