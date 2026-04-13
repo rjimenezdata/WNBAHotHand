@@ -162,7 +162,7 @@ lv_2023_games <- pull_list_games(df_shots, 17, 2023)
 ny_2024_games <- pull_list_games(df_shots, 9, 2024)
 
 # number of permutations to run for each game
-n_trials <- 10000
+n_trials <- 100000
 
 # iterate over all games in the list
 # take a random permutation of the shots in game, compute statistic
@@ -197,6 +197,7 @@ df_shots |>
 ```
 
 ```{r}
+set.seed(619)
 perm_stats_2023 <- lv_2023_games |> map(~replicate(
     n_trials,
     phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
@@ -220,10 +221,19 @@ results_2023 |>
 
 results_2023 |>
   pull(p_value) |>
+  na.omit() |>
   p.adjust("hochberg")
+
+results_2023 |>
+  mutate(
+    perm_mean = map_dbl(perm_dist, ~ mean(.x, na.rm = TRUE)),
+    bias_adj = observed - perm_mean
+  ) |>
+  select(game_id, p_value, bias_adj)
 ```
 
 ```{r}
+set.seed(619)
 perm_stats_2024 <- ny_2024_games |> map(~replicate(
     n_trials,
     phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
@@ -248,4 +258,11 @@ results_2024 |>
 results_2024 |>
   pull(p_value) |>
   p.adjust(method = "hochberg")
+
+results_2024 |>
+  mutate(
+    perm_mean = map_dbl(perm_dist, ~ mean(.x, na.rm = TRUE)),
+    bias_adj = observed - perm_mean
+  ) |>
+  select(game_id, p_value, bias_adj)
 ```
