@@ -2,7 +2,7 @@
 title: "Streak Stats"
 author: "Ruben Jimenez"
 format: html
-editor: visual
+editor: source
 embed-resources: true
 ---
 
@@ -10,8 +10,12 @@ embed-resources: true
 #| include: false
 
 library(tidyverse)
+library(lme4) 
+
 df_shots <- read.csv("df_shots.csv") |>
-  select(-X)
+  select(-X) |>
+  mutate(shot_type = if_else(str_detect(text, "three point"), 3, 2),
+         scoring_play = as.integer(scoring_play))
 df_shots
 ```
 
@@ -80,6 +84,36 @@ streak_stats = function(results_sequence, streak_length){
                     #                     n_runs_failure,
                     #                     longest_run_failure,
   ))
+}
+
+# For only Sstreak - others
+phat_Sstreak_vs_others <- function(results_sequence, streak_length){
+  n_trials = length(results_sequence)
+  n_success = sum(results_sequence)
+  
+  run_lengths = rle(results_sequence)$lengths
+  if_run_success = rle(results_sequence)$values
+  
+  # successes after streaks of Successes
+  run_lengths_adj = run_lengths - streak_length + 1
+  run_values_adj_S =
+    if_run_success *
+    (!((if_run_success == 1) &
+         (run_lengths < streak_length)))
+  n_after_Sstreak = sum(run_lengths_adj * run_values_adj_S) -
+    run_values_adj_S[length(run_values_adj_S)]
+  n_success_after_Sstreak = sum((run_lengths - streak_length) * run_values_adj_S)
+  
+  if (n_after_Sstreak <= 0) return(NA_real_)
+  if ((n_trials - n_after_Sstreak) <= 0) return(NA_real_)
+  
+  phat_after_Sstreak = n_success_after_Sstreak / n_after_Sstreak
+  phat_after_Sstreak
+  
+  phat_after_no_Sstreak = (n_success - n_success_after_Sstreak)/
+    (n_trials - n_after_Sstreak)
+  
+  phat_after_Sstreak - phat_after_no_Sstreak
 }
 
 # For only Sstreak - Fstreak
@@ -162,13 +196,13 @@ lv_2023_games <- pull_list_games(df_shots, 17, 2023)
 ny_2024_games <- pull_list_games(df_shots, 9, 2024)
 
 # number of permutations to run for each game
-n_trials <- 100000
+n_trials <- 10000
 
 # iterate over all games in the list
 # take a random permutation of the shots in game, compute statistic
 perm_stats_2022 <- lv_2022_games |> map(~replicate(
     n_trials,
-    phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
+    phat_Sstreak_vs_others(sample(.x$shot_made), 3)
   )
 )
 
@@ -176,7 +210,7 @@ perm_stats_2022 <- lv_2022_games |> map(~replicate(
 map(perm_stats_2022, hist)
 results_2022 <- tibble(
   game_id = map_int(lv_2022_games, ~ .x$game_id[1]),
-  observed = map_dbl(lv_2022_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
+  observed = map_dbl(lv_2022_games, ~ phat_Sstreak_vs_others(.x$shot_made, 3)),
   perm_dist = perm_stats_2022
 ) |>
   mutate(
@@ -197,7 +231,7 @@ results_2022 |>
 set.seed(619)
 perm_stats_2023 <- lv_2023_games |> map(~replicate(
     n_trials,
-    phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
+    phat_Sstreak_vs_others(sample(.x$shot_made), 3)
   )
 )
 
@@ -205,7 +239,7 @@ perm_stats_2023 <- lv_2023_games |> map(~replicate(
 map(perm_stats_2023, hist)
 results_2023 <- tibble(
   game_id = map_int(lv_2023_games, ~ .x$game_id[1]),
-  observed = map_dbl(lv_2023_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
+  observed = map_dbl(lv_2023_games, ~ phat_Sstreak_vs_others(.x$shot_made, 3)),
   perm_dist = perm_stats_2023
 ) |>
   mutate(
@@ -260,3 +294,162 @@ results_2024 |>
   ) |>
   select(game_id, p_value, bias_adj)
 ```
+
+
+```{r}
+# fit GLM
+
+glm_shots <- df_shots |>
+  arrange(team_id, game_id, time_elapsed) |>
+  group_by(team_id, game_id) |>
+  mutate(
+    miss_group = cumsum(lag(scoring_play, default = 0) == 0),  # resets after a miss
+    streak = ave(scoring_play, miss_group, FUN = cumsum),      # running makes within streak
+    after_3_makes = ifelse(lag(streak, default = 0) >= 3, 1, 0)
+  ) |>
+  ungroup()
+
+# null_model <- glm(scoring_play ~ factor(after_3_makes) + factor(shot_type) + factor(team_id) + time_elapsed, family = binomial(link = "logit"), data = glm_shots) 
+# 
+
+null_model <- glm(
+    scoring_play ~ factor(after_3_makes) +
+      ns(shot_dist, df = 3) +
+      ns(time_elapsed, df = 4) +
+      factor(team_id) + factor(season),
+    family = binomial(),
+    data = glm_shots
+  )
+
+summary(null_model)
+
+phat <- predict(null_model, newdata = glm_shots, type = "response")
+
+glm_shots_predicted <- glm_shots |>
+  cbind(phat) |>
+  relocate(scoring_play, phat)
+
+head(glm_shots_predicted)
+```
+
+```{r}
+n_sims = 10000
+
+sim_results_2022 <- glm_shots_predicted |>
+  filter(team_id == 17,
+         season == 2022) |>
+  arrange(game_id, sequence_number) |>
+  group_by(game_id) |>
+  summarize(
+    observed_stat = phat_Sstreak_vs_others(scoring_play, 3),
+    
+    sim_stats = list(
+      replicate(
+        n_sims,
+        phat_Sstreak_vs_others(
+          rbinom(n = n(), size = 1, prob = phat),
+          3
+        )
+      )
+    ),
+    .groups = "drop"
+  ) |>
+  unnest_wider(sim_stats, names_sep = "_") |>
+  rename_with(
+    ~ paste0("sim_", seq_along(.)),
+    starts_with("sim_stats_")
+  ) |>
+  rowwise() |>
+  mutate(
+    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
+  ) |>
+  ungroup() |>
+  select(-c(3:10002)) |>
+  arrange(p_value)
+
+sim_results_2022
+
+p.adjust(sim_results_2022$p_value, method = "BH") |>
+  cbind(sim_results_2022)
+
+```
+
+```{r}
+sim_results_2023 <- glm_shots_predicted |>
+  filter(team_id == 17,
+         season == 2023) |>
+  arrange(game_id, sequence_number) |>
+  group_by(game_id) |>
+  summarize(
+    observed_stat = phat_Sstreak_vs_others(scoring_play, 3),
+    
+    sim_stats = list(
+      replicate(
+        n_sims,
+        phat_Sstreak_vs_others(
+          rbinom(n = n(), size = 1, prob = phat),
+          3
+        )
+      )
+    ),
+    .groups = "drop"
+  ) |>
+  unnest_wider(sim_stats, names_sep = "_") |>
+  rename_with(
+    ~ paste0("sim_", seq_along(.)),
+    starts_with("sim_stats_")
+  ) |>
+  rowwise() |>
+  mutate(
+    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
+  ) |>
+  ungroup() |>
+  select(-c(3:10002)) |>
+  arrange(p_value)
+
+sim_results_2023
+
+p.adjust(sim_results_2023$p_value, method = "BH") |>
+  cbind(sim_results_2023)
+```
+
+
+```{r}
+sim_results_2024 <- glm_shots_predicted |>
+  filter(team_id == 9,
+         season == 2024) |>
+  arrange(game_id, sequence_number) |>
+  group_by(game_id) |>
+  summarize(
+    observed_stat = phat_Sstreak_vs_others(scoring_play, 3),
+    
+    sim_stats = list(
+      replicate(
+        n_sims,
+        phat_Sstreak_vs_others(
+          rbinom(n = n(), size = 1, prob = phat),
+          3
+        )
+      )
+    ),
+    .groups = "drop"
+  ) |>
+  unnest_wider(sim_stats, names_sep = "_") |>
+  rename_with(
+    ~ paste0("sim_", seq_along(.)),
+    starts_with("sim_stats_")
+  ) |>
+  rowwise() |>
+  mutate(
+    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
+  ) |>
+  ungroup() |>
+  select(-c(3:10002)) |>
+  arrange(p_value)
+
+sim_results_2022
+
+p.adjust(sim_results_2024$p_value, method = "BH") |>
+  cbind(sim_results_2024)
+```
+
