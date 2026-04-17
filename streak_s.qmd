@@ -363,15 +363,35 @@ sim_results_2022 <- glm_shots_predicted |>
   mutate(
     p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
   ) |>
-  ungroup() |>
+  ungroup()
+
+sim_results_2022 |>
   select(-c(3:10002)) |>
   arrange(p_value)
 
-sim_results_2022
-
 p.adjust(sim_results_2022$p_value, method = "BH") |>
-  cbind(sim_results_2022)
+  cbind(sim_results_2022) |>
+  select(-c(4:10003))
 
+longer_2022 <- sim_results_2022 |>
+  pivot_longer(
+    cols = starts_with("sim_"),
+    names_to = "simulation",
+    values_to = "sim_value"
+  )
+
+sample_games <- sim_results_2022 |> 
+  slice_min(p_value, n = 6) |>
+  pull(game_id)
+
+ggplot(filter(longer_2022, game_id %in% sample_games), aes(x = sim_value)) +
+  geom_density() +
+  geom_vline(
+    data = filter(sim_results_2022, game_id %in% sample_games),
+    aes(xintercept = observed_stat),
+    color = "red"
+  ) +
+  facet_wrap(~ game_id, scales = "free")
 ```
 
 ```{r}
@@ -403,14 +423,35 @@ sim_results_2023 <- glm_shots_predicted |>
   mutate(
     p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
   ) |>
-  ungroup() |>
+  ungroup()
+
+sim_results_2023 |>
   select(-c(3:10002)) |>
   arrange(p_value)
 
-sim_results_2023
-
 p.adjust(sim_results_2023$p_value, method = "BH") |>
-  cbind(sim_results_2023)
+  cbind(sim_results_2023) |>
+  select(-c(4:10003))
+
+longer_2023 <- sim_results_2023 |>
+  pivot_longer(
+    cols = starts_with("sim_"),
+    names_to = "simulation",
+    values_to = "sim_value"
+  )
+
+sample_games <- sim_results_2023 |> 
+  slice_min(p_value, n = 6) |>
+  pull(game_id)
+
+ggplot(filter(longer_2023, game_id %in% sample_games), aes(x = sim_value)) +
+  geom_density() +
+  geom_vline(
+    data = filter(sim_results_2023, game_id %in% sample_games),
+    aes(xintercept = observed_stat),
+    color = "red"
+  ) +
+  facet_wrap(~ game_id, scales = "free")
 ```
 
 
@@ -443,13 +484,34 @@ sim_results_2024 <- glm_shots_predicted |>
   mutate(
     p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
   ) |>
-  ungroup() |>
+  ungroup()
+
+sim_results_2024 |>
   select(-c(3:10002)) |>
   arrange(p_value)
 
-sim_results_2022
-
 p.adjust(sim_results_2024$p_value, method = "BH") |>
-  cbind(sim_results_2024)
+  cbind(sim_results_2024) |>
+  select(-c(4:10003))
+
+longer_2024 <- sim_results_2024 |>
+  pivot_longer(
+    cols = starts_with("sim_"),
+    names_to = "simulation",
+    values_to = "sim_value"
+  )
+
+sample_games <- sim_results_2024 |> 
+  slice_min(p_value, n = 6) |>
+  pull(game_id)
+
+ggplot(filter(longer_2024, game_id %in% sample_games), aes(x = sim_value)) +
+  geom_density() +
+  geom_vline(
+    data = filter(sim_results_2024, game_id %in% sample_games),
+    aes(xintercept = observed_stat),
+    color = "red"
+  ) +
+  facet_wrap(~ game_id, scales = "free")
 ```
 
