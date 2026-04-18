@@ -562,3 +562,12 @@ ggplot(filter(longer_2024, game_id %in% sample_games), aes(x = sim_value)) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2024 NY Liberty On Simulated Null Distribution")
 ```
 
+What happened during these games?
+```{r}
+df_shots |>
+  filter(team_id == 9,
+         season == 2024,
+         game_id %in% c(401620311, 
+                        401677672))
+```
+
