@@ -322,9 +322,8 @@ glm_shots <- df_shots |>
 # 
 
 null_model <- glm(
-    scoring_play ~ factor(sequence_type) +
-      ns(shot_dist, df = 3) +
-      ns(time_elapsed, df = 4) +
+    scoring_play ~ factor(shot_type) +
+      time_elapsed +
       factor(team_id) + factor(season) + factor(season)*factor(team_id),
     family = binomial(),
     data = glm_shots
