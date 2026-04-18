@@ -11,6 +11,7 @@ embed-resources: true
 
 library(tidyverse)
 library(lme4) 
+library(splines)
 
 df_shots <- read.csv("df_shots.csv") |>
   select(-X) |>
@@ -202,7 +203,7 @@ n_trials <- 10000
 # take a random permutation of the shots in game, compute statistic
 perm_stats_2022 <- lv_2022_games |> map(~replicate(
     n_trials,
-    phat_Sstreak_vs_others(sample(.x$shot_made), 3)
+    phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
   )
 )
 
@@ -210,7 +211,7 @@ perm_stats_2022 <- lv_2022_games |> map(~replicate(
 map(perm_stats_2022, hist)
 results_2022 <- tibble(
   game_id = map_int(lv_2022_games, ~ .x$game_id[1]),
-  observed = map_dbl(lv_2022_games, ~ phat_Sstreak_vs_others(.x$shot_made, 3)),
+  observed = map_dbl(lv_2022_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
   perm_dist = perm_stats_2022
 ) |>
   mutate(
@@ -231,7 +232,7 @@ results_2022 |>
 set.seed(619)
 perm_stats_2023 <- lv_2023_games |> map(~replicate(
     n_trials,
-    phat_Sstreak_vs_others(sample(.x$shot_made), 3)
+    phat_Sstreak_Fstreak(sample(.x$shot_made), 3)
   )
 )
 
@@ -239,7 +240,7 @@ perm_stats_2023 <- lv_2023_games |> map(~replicate(
 map(perm_stats_2023, hist)
 results_2023 <- tibble(
   game_id = map_int(lv_2023_games, ~ .x$game_id[1]),
-  observed = map_dbl(lv_2023_games, ~ phat_Sstreak_vs_others(.x$shot_made, 3)),
+  observed = map_dbl(lv_2023_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
   perm_dist = perm_stats_2023
 ) |>
   mutate(
@@ -305,7 +306,15 @@ glm_shots <- df_shots |>
   mutate(
     miss_group = cumsum(lag(scoring_play, default = 0) == 0),  # resets after a miss
     streak = ave(scoring_play, miss_group, FUN = cumsum),      # running makes within streak
-    after_3_makes = ifelse(lag(streak, default = 0) >= 3, 1, 0)
+    after_3_makes = ifelse(lag(streak, default = 0) >= 3, 1, 0),
+    
+    make_group = cumsum(lag(scoring_play, default = 0) == 1),
+    miss_streak = ave(1 - scoring_play, make_group, FUN = cumsum),
+    after_3_misses = ifelse(lag(miss_streak, default = 0) >= 3, 1, 0),
+    
+    sequence_type = case_when(after_3_misses == 1 ~ 0,
+                              after_3_makes == 1 ~ 1,
+                              after_3_makes == 0 & after_3_misses == 0 ~ 2)
   ) |>
   ungroup()
 
@@ -313,10 +322,10 @@ glm_shots <- df_shots |>
 # 
 
 null_model <- glm(
-    scoring_play ~ factor(after_3_makes) +
+    scoring_play ~ factor(sequence_type) +
       ns(shot_dist, df = 3) +
       ns(time_elapsed, df = 4) +
-      factor(team_id) + factor(season),
+      factor(team_id) + factor(season) + factor(season)*factor(team_id),
     family = binomial(),
     data = glm_shots
   )
@@ -341,12 +350,12 @@ sim_results_2022 <- glm_shots_predicted |>
   arrange(game_id, sequence_number) |>
   group_by(game_id) |>
   summarize(
-    observed_stat = phat_Sstreak_vs_others(scoring_play, 3),
+    observed_stat = phat_Sstreak_Fstreak(scoring_play, 3),
     
     sim_stats = list(
       replicate(
         n_sims,
-        phat_Sstreak_vs_others(
+        phat_Sstreak_Fstreak(
           rbinom(n = n(), size = 1, prob = phat),
           3
         )
@@ -365,6 +374,7 @@ sim_results_2022 <- glm_shots_predicted |>
   ) |>
   ungroup()
 
+# results of simulations
 sim_results_2022 |>
   select(-c(3:10002)) |>
   arrange(p_value)
@@ -372,6 +382,19 @@ sim_results_2022 |>
 p.adjust(sim_results_2022$p_value, method = "BH") |>
   cbind(sim_results_2022) |>
   select(-c(4:10003))
+
+# let's look at games that have low p-values
+df_shots |>
+  filter(team_id == 17,
+         season == 2022,
+         game_id %in% c(401391727, 
+                        401391828, 
+                        401391678,
+                        401455683)) |>
+  group_by(game_id) |>
+  arrange(game_id, sequence_number) |>
+  summarize(statistics = streak_stats(scoring_play, 3)) |>
+  unnest_wider(statistics)
 
 longer_2022 <- sim_results_2022 |>
   pivot_longer(
@@ -391,7 +414,7 @@ ggplot(filter(longer_2022, game_id %in% sample_games), aes(x = sim_value)) +
     aes(xintercept = observed_stat),
     color = "red"
   ) +
-  facet_wrap(~ game_id, scales = "free")
+  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2022 LV Aces On Simulated Null Distribution")
 ```
 
 ```{r}
@@ -401,12 +424,12 @@ sim_results_2023 <- glm_shots_predicted |>
   arrange(game_id, sequence_number) |>
   group_by(game_id) |>
   summarize(
-    observed_stat = phat_Sstreak_vs_others(scoring_play, 3),
+    observed_stat = phat_Sstreak_Fstreak(scoring_play, 3),
     
     sim_stats = list(
       replicate(
         n_sims,
-        phat_Sstreak_vs_others(
+        phat_Sstreak_Fstreak(
           rbinom(n = n(), size = 1, prob = phat),
           3
         )
@@ -433,6 +456,19 @@ p.adjust(sim_results_2023$p_value, method = "BH") |>
   cbind(sim_results_2023) |>
   select(-c(4:10003))
 
+
+df_shots |>
+  filter(team_id == 17,
+         season == 2023,
+         game_id %in% c(401507310, 
+                        401578554)) |>
+  group_by(game_id) |>
+  arrange(game_id, sequence_number) |>
+  summarize(statistics = streak_stats(scoring_play, 3)) |>
+  unnest_wider(statistics)
+
+
+
 longer_2023 <- sim_results_2023 |>
   pivot_longer(
     cols = starts_with("sim_"),
@@ -451,7 +487,7 @@ ggplot(filter(longer_2023, game_id %in% sample_games), aes(x = sim_value)) +
     aes(xintercept = observed_stat),
     color = "red"
   ) +
-  facet_wrap(~ game_id, scales = "free")
+  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2023 LV Aces On Simulated Null Distribution")
 ```
 
 
@@ -462,12 +498,12 @@ sim_results_2024 <- glm_shots_predicted |>
   arrange(game_id, sequence_number) |>
   group_by(game_id) |>
   summarize(
-    observed_stat = phat_Sstreak_vs_others(scoring_play, 3),
+    observed_stat = phat_Sstreak_Fstreak(scoring_play, 3),
     
     sim_stats = list(
       replicate(
         n_sims,
-        phat_Sstreak_vs_others(
+        phat_Sstreak_Fstreak(
           rbinom(n = n(), size = 1, prob = phat),
           3
         )
@@ -494,6 +530,17 @@ p.adjust(sim_results_2024$p_value, method = "BH") |>
   cbind(sim_results_2024) |>
   select(-c(4:10003))
 
+
+df_shots |>
+  filter(team_id == 9,
+         season == 2024,
+         game_id %in% c(401620311, 
+                        401677672)) |>
+  group_by(game_id) |>
+  arrange(game_id, sequence_number) |>
+  summarize(statistics = streak_stats(scoring_play, 3)) |>
+  unnest_wider(statistics)
+
 longer_2024 <- sim_results_2024 |>
   pivot_longer(
     cols = starts_with("sim_"),
@@ -512,6 +559,6 @@ ggplot(filter(longer_2024, game_id %in% sample_games), aes(x = sim_value)) +
     aes(xintercept = observed_stat),
     color = "red"
   ) +
-  facet_wrap(~ game_id, scales = "free")
+  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2024 NY Liberty On Simulated Null Distribution")
 ```
 
