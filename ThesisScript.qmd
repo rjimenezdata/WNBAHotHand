@@ -12,6 +12,7 @@ library(depmixS4)
 library(tidyverse)
 library(wehoop)
 library(msm)
+library(gt)
 
 ```
 
@@ -103,7 +104,11 @@ summ_data <- shot_data |>
          scoring_play = as.factor(scoring_play)) |>
   dplyr::select(team_id, season, game_id, shot_type, scoring_play, shot_dist)
 
-summ_df(summ_data)
+summ_df(summ_data) |>
+  gt() |>
+  fmt_number(decimals = 2) |>
+  col
+  
 
 shot_data |>
   mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2)) |>
