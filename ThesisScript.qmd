@@ -59,10 +59,51 @@ Does using games as observational units mean we can only use game-level variable
 ## Summary Statistics
 
 ```{r}
-shot_data |> 
+#| include: false
+
+summ_stats <- function(x){
+  if (is.numeric(x)){
+    tibble(Mean = mean(x),
+              Median = median(x),
+              `Standard Deviation` = sd(x),
+              IQR = IQR(x))
+  }
+  else if (is.factor(x) || is.character(x)){
+    tibble(Levels = length(unique(x)))
+  }
+  else {
+    warning("Unsupported input type")
+    return(NULL)
+  }
+}
+
+summ_df <- function(df){
+  if (is.data.frame(df)){
+    map(df, summ_stats) |>
+    bind_rows(.id = "Variable") |>
+    pivot_longer(cols = !Variable,
+                 names_to = "Summary") |>
+    pivot_wider(names_from = Variable) 
+  }
+  else {
+    warning("Input type not supported")
+    return(NULL)
+  }
+}
+
+```
+
+```{r}
+summ_data <- shot_data |> 
   filter((team_id == 17 & season == 2022) | (team_id == 17 & season == 2023) | (team_id == 9 & season == 2024)) |>
-  mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2)) |>
-  dplyr::select(team_id, season, game_id, sequence_number, shot_type, scoring_play)
+  mutate(shot_type = as.factor(if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2)),
+         team_id = as.factor(team_id),
+         season = as.factor(season),
+         game_id = as.factor(game_id),
+         scoring_play = as.factor(scoring_play)) |>
+  dplyr::select(team_id, season, game_id, shot_type, scoring_play, shot_dist)
+
+summ_df(summ_data)
 
 shot_data |>
   mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2)) |>
