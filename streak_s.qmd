@@ -15,7 +15,7 @@ library(splines)
 
 df_shots <- read.csv("df_shots.csv") |>
   select(-X) |>
-  mutate(shot_type = if_else(str_detect(text, "three point"), 3, 2),
+  mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2),
          scoring_play = as.integer(scoring_play))
 head(df_shots)
 
