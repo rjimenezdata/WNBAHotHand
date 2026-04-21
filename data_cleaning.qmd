@@ -153,7 +153,7 @@ streak_data <- shot_data |>
   mutate(make_streak_length = if_else(is_make, cumsum(is_make), 0)) |>
   group_by(game_id, athlete_id_1, make_grp) |>
   mutate(miss_streak_length = if_else(is_miss, cumsum(is_miss), 0),
-         shot_distance = sqrt(coordinate_x^2 + coordinate_y^2)) |>
+         shot_distance = sqrt(((coordinate_x_raw-22.146)^2) + (coordinate_y_raw^2))) |>
   ungroup()
 
 streak_data |>
