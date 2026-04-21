@@ -49,6 +49,12 @@ shot_data <- pbp_data |>
 shot_data |>
   ggplot(aes(x = shot_dist)) + geom_density()
 
+shot_data |>
+  ggplot(aes(x = shot_dist, y = as.integer(scoring_play))) + geom_smooth() + scale_y_continuous(labels = scales::percent_format(),
+                                                                                                limits = c(0, 1)) + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(x = "Shot Distance (ft)",
+                                                                                                                                                                                                        y = "",
+                                                                                                                                                                                       title = "Shooting Percentage from Distance")
+
 # write.csv(shot_data, file = "df_shots.csv")
 ```
 
@@ -143,7 +149,7 @@ geom_basketball(league = "WNBA") + geom_jitter(aes(x = summ_data$coordinate_x, y
 #          team_id = as.factor(team_id))
 ```
 
-##   Aims:
+## Aims:
 
 1.  To determine what offensive factors might lead to hot/cold states
 2.  To determine where the hot/cold streaks may have occurred, and how often
