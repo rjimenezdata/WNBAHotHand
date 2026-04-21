@@ -13,6 +13,7 @@ library(tidyverse)
 library(wehoop)
 library(msm)
 library(gt)
+library(sportyR)
 
 ```
 
@@ -101,21 +102,48 @@ summ_data <- shot_data |>
          team_id = as.factor(team_id),
          season = as.factor(season),
          game_id = as.factor(game_id),
-         scoring_play = as.factor(scoring_play)) |>
-  dplyr::select(team_id, season, game_id, shot_type, scoring_play, shot_dist)
+         scoring_play = as.factor(scoring_play))
 
-summ_df(summ_data) |>
+summ_data |>
+  group_by(team_id, season) |>
+  summarize("Team" = unique(team_id),
+            "Season" = unique(season),
+    "Mean Shot Distance" = mean(shot_dist),
+            "2-Pt Attempts" = sum(shot_type == 2),
+    "3-Pt Attempts" = sum(shot_type == 3),
+    "FG%" = mean(as.logical(scoring_play)*100),
+    "Games Played" = n_distinct(game_id)
+    ) |>
+  mutate(Team = fct_recode(Team, "LV Aces" = "17", "NY Liberty" = "9")) |>
+  ungroup() |>
+  select(-c(team_id, season)) |>
+  arrange(Season) |>
   gt() |>
-  fmt_number(decimals = 2) |>
-  col
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(everything())
+  ) |>
+  tab_header(
+    title = "Summary of Filtered Data"
+  )
   
 
-shot_data |>
-  mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2)) |>
-  ggplot(aes(x = coordinate_x, y = coordinate_y, color = shot_type)) + geom_point()
+# shot_data |>
+#   filter((team_id == 17 & season == 2022) | (team_id == 17 & season == 2023) | (team_id == 9 & season == 2024)) |>
+#   mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2),
+#          team_id = as.factor(team_id)) |>
+#   ggplot(aes(x = coordinate_x, y = coordinate_y, color = team_id)) + geom_jitter() + scale_color_manual(values = c("aquamarine", "black")) + labs(x = "", y = "")
+
+geom_basketball(league = "WNBA") + geom_jitter(aes(x = summ_data$coordinate_x, y = summ_data$coordinate_y, color = summ_data$team_id)) + scale_color_manual(values = c("aquamarine", "black")) + labs(title = "Shots taken by teams in the data",
+                                                                                                                                                                                                      subtitle = "Aquamarine shots are NY Liberty, black shots are LV Aces") + theme(legend.position = "none")
+
+# shot_data |>
+#   filter((team_id == 17 & season == 2022) | (team_id == 17 & season == 2023) | (team_id == 9 & season == 2024)) |>
+#   mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2),
+#          team_id = as.factor(team_id))
 ```
 
-## Aims:
+##   Aims:
 
 1.  To determine what offensive factors might lead to hot/cold states
 2.  To determine where the hot/cold streaks may have occurred, and how often
