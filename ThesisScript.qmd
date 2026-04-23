@@ -14,6 +14,7 @@ library(wehoop)
 library(msm)
 library(gt)
 library(sportyR)
+library(patchwork)
 
 ```
 
@@ -28,7 +29,7 @@ pbp_data <- load_wnba_pbp(seasons = season_years)
 
 The Las Vegas Aces won the championship in 2022. The Las Vegas Aces won the championship in 2023. The New York Liberty won the championship in 2024. These are the teams we are interested in investigating, but I am open to looking at other teams too. How does including all teams vs. including only winning teams in the data play out?
 
-```{r}
+```{r, warning = F, message = F}
 # sample_data <- pbp_data |>
 #   select(id, sequence_number, type_text, clock_display_value, qtr)
 # write.csv(sample_data, "sample_data.csv")
@@ -49,12 +50,59 @@ shot_data <- pbp_data |>
 shot_data |>
   ggplot(aes(x = shot_dist)) + geom_density()
 
-shot_data |>
-  ggplot(aes(x = shot_dist, y = as.integer(scoring_play))) + geom_smooth() + scale_y_continuous(labels = scales::percent_format(),
-                                                                                                limits = c(0, 1)) + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(x = "Shot Distance (ft)",
+# championship winners 2022-2024
+c_plot <- shot_data |>
+  filter((team_id == 17 & season == 2022) | (team_id == 17 & season == 2023) | (team_id == 9 & season == 2024)) |>
+  ggplot(aes(x = shot_dist, y = as.integer(scoring_play))) + geom_smooth(se=F) + scale_y_continuous(labels = scales::percent_format(),
+                                                                                                limits = c(0, 1)) + scale_x_continuous(limits = c(0, 80))+ 
+  theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(x = "Shot Distance (ft)",
                                                                                                                                                                                                         y = "",
-                                                                                                                                                                                       title = "Shooting Percentage from Distance")
+                                                                                                                                                                                       title = "Shooting Percentage from Distance, Championship Winners 2022-2024")
 
+# rest of league 2022-2024
+rol_plot <- shot_data |>
+  filter(
+    !(team_id == 17 & season %in% c(2022, 2023)),
+    !(team_id == 9  & season == 2024)
+  ) |>
+  ggplot(aes(x = shot_dist, y = as.integer(scoring_play))) + geom_smooth(se=F) + scale_y_continuous(labels = scales::percent_format(),
+                                                                                                limits = c(0, 1)) +
+  scale_x_continuous(limits = c(0, 80)) + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(x = "Shot Distance (ft)",
+                                                                                                                                                                                                        y = "",
+                                                                                                                                                                                       title = "Shooting Percentage from Distance, Rest of League 2022-2024")
+
+shot_data |>
+  mutate(
+    group = case_when(
+      team_id == 17 & season == 2022 ~ "2022 LV Aces",
+      team_id == 17 & season == 2023 ~ "2023 LV Aces",
+      team_id == 9  & season == 2024 ~ "2024 NY Liberty",
+      TRUE                           ~ "Rest of League"
+    )
+  ) |>
+  ggplot(aes(x = shot_dist,
+             y = as.integer(scoring_play),
+             color = group)) +
+  geom_smooth(se = FALSE) +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0, 1)) +
+  scale_x_continuous(limits = c(0, 60),
+                     breaks = seq(0, 60, by = 10)) +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(x = "Shot Distance (ft)",
+       y = "",
+       title = "Shooting Percentage from Distance, 2022–2024",
+       color = "") +
+  scale_color_manual(values = c(
+    "2022 LV Aces" = "red",
+    "2023 LV Aces" = "blue",
+    "2024 NY Liberty"  = "green",
+    "Rest of League" = "gray70"
+  ))
+  
+
+c_plot + rol_plot
 # write.csv(shot_data, file = "df_shots.csv")
 ```
 
