@@ -303,7 +303,7 @@ results_2024 |>
 ```
 
 
-```{r}
+```{r, warning = F}
 # fit GLM
 
 glm_shots <- df_shots |>
@@ -322,7 +322,12 @@ glm_shots <- df_shots |>
                               after_3_makes == 1 ~ 1,
                               after_3_makes == 0 & after_3_misses == 0 ~ 2),
     streak_group = if_else(streak >= 3, "3+", "0-2"),
-    streak_group = factor(streak_group, levels = c("0-2", "3+"))
+    streak_group = factor(streak_group, levels = c("0-2", "3+")),
+    streak_group_2 = case_when(streak == 0 ~ "0",
+                               streak == 1 ~ "1",
+                               streak == 2 ~ "2",
+                               streak == 3 ~ "3",
+                               streak >= 4 ~ "4+")
   ) |>
   ungroup()
 
@@ -348,7 +353,23 @@ glm_shots_predicted <- glm_shots |>
 head(glm_shots_predicted)
 
 glm_shots |>
-  ggplot(aes(y = shot_dist, group = streak_group)) + geom_boxplot()
+  ggplot(aes(x = shot_dist, color = streak_group)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density for Different Streak Groupings", y = "", x = "Shot Distance (ft)", color = "Streak Group")
+
+# rest of league
+glm_shots |>
+  filter(
+    !(
+      (team_id == 17 & season %in% c(2022, 2023)) |
+      (team_id == 9  & season == 2024)
+    )
+  ) |>
+  ggplot(aes(x = shot_dist, color = streak_group_2)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Conditional Shot Density for Different Streak Groupings", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
+
+# 2022 lv aces
+glm_shots |>
+  filter(season == 2022 & team_id == 17) |>
+  ggplot(aes(x = shot_dist, color = streak_group_2)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Conditional Shot Density for Different Streak Groupings", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
+
 ```
 
 ```{r}
