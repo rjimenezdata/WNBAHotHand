@@ -9,10 +9,10 @@ embed-resources: true
 ```{r setup}
 #| include: false
 
+library(sportyR)
 library(tidyverse)
 library(lme4) 
 library(splines)
-library(sportyR)
 
 df_shots <- read.csv("df_shots.csv") |>
   select(-X) |>
@@ -348,7 +348,7 @@ glm_shots_predicted <- glm_shots |>
 head(glm_shots_predicted)
 
 glm_shots |>
-  ggplot(aes(y = shot_dist, color = streak_group)) + geom_jitter()
+  ggplot(aes(y = shot_dist, group = streak_group)) + geom_boxplot()
 ```
 
 ```{r}
