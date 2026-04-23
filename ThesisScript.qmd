@@ -44,7 +44,7 @@ shot_data <- pbp_data |>
   mutate(athlete_id_1 = as.factor(athlete_id_1),
          type_text = as.factor(type_text),
          time_elapsed = 2400 - end_game_seconds_remaining,
-         shot_dist = sqrt(((coordinate_x_raw-25)^2) + (coordinate_y_raw^2))) |>
+         shot_dist = sqrt(((coordinate_x_raw-25)^2) + ((coordinate_y_raw+5)^2))) |>
   arrange(game_id)
 
 shot_data |>
