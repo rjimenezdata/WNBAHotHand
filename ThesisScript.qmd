@@ -152,7 +152,7 @@ summ_df <- function(df){
 ```{r}
 summ_data <- shot_data |> 
   filter((team_id == 17 & season == 2022) | (team_id == 17 & season == 2023) | (team_id == 9 & season == 2024)) |>
-  mutate(shot_type = as.factor(if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2)),
+  mutate(shot_type = as.factor(if_else(str_detect(text, "three point") | shot_dist > 25, 3, 2)),
          team_id = as.factor(team_id),
          season = as.factor(season),
          game_id = as.factor(game_id),
