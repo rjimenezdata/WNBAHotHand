@@ -12,10 +12,11 @@ embed-resources: true
 library(tidyverse)
 library(lme4) 
 library(splines)
+library(sportyR)
 
 df_shots <- read.csv("df_shots.csv") |>
   select(-X) |>
-  mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 22.146, 3, 2),
+  mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 25, 3, 2),
          scoring_play = as.integer(scoring_play))
 head(df_shots)
 
@@ -319,7 +320,9 @@ glm_shots <- df_shots |>
     
     sequence_type = case_when(after_3_misses == 1 ~ 0,
                               after_3_makes == 1 ~ 1,
-                              after_3_makes == 0 & after_3_misses == 0 ~ 2)
+                              after_3_makes == 0 & after_3_misses == 0 ~ 2),
+    streak_group = if_else(streak >= 3, "3+", "0-2"),
+    streak_group = factor(streak_group, levels = c("0-2", "3+"))
   ) |>
   ungroup()
 
@@ -343,6 +346,9 @@ glm_shots_predicted <- glm_shots |>
   relocate(scoring_play, phat)
 
 head(glm_shots_predicted)
+
+glm_shots |>
+  ggplot(aes(y = shot_dist, color = streak_group)) + geom_jitter()
 ```
 
 ```{r}
