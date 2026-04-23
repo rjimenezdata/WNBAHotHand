@@ -101,8 +101,6 @@ shot_data |>
     "Rest of League" = "gray70"
   ))
   
-
-c_plot + rol_plot
 # write.csv(shot_data, file = "df_shots.csv")
 ```
 
