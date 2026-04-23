@@ -327,7 +327,12 @@ glm_shots <- df_shots |>
                                streak == 1 ~ "1",
                                streak == 2 ~ "2",
                                streak == 3 ~ "3",
-                               streak >= 4 ~ "4+")
+                               streak >= 4 ~ "4+"),
+    streak_before = streak - scoring_play,
+    streak_before = case_when(streak_before == 0 ~ "0",
+                               streak_before == 1 ~ "1",
+                               streak_before == 2 ~ "2",
+                               streak_before >= 3 ~ "3+")
   ) |>
   ungroup()
 
@@ -353,7 +358,7 @@ glm_shots_predicted <- glm_shots |>
 head(glm_shots_predicted)
 
 glm_shots |>
-  ggplot(aes(x = shot_dist, color = streak_group)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density for Different Streak Groupings", y = "", x = "Shot Distance (ft)", color = "Streak Group")
+  ggplot(aes(x = shot_dist, color = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak length before shot")
 
 # rest of league
 glm_shots |>
@@ -363,12 +368,22 @@ glm_shots |>
       (team_id == 9  & season == 2024)
     )
   ) |>
-  ggplot(aes(x = shot_dist, color = streak_group_2)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Conditional Shot Density for Different Streak Groupings", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
+  ggplot(aes(x = shot_dist, color = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", subtitle = "Rest of League 2022-2024", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
 
 # 2022 lv aces
 glm_shots |>
   filter(season == 2022 & team_id == 17) |>
-  ggplot(aes(x = shot_dist, color = streak_group_2)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Conditional Shot Density for Different Streak Groupings", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
+  ggplot(aes(x = shot_dist, color = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", subtitle = "LV Aces 2022", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
+
+# 2023 lv aces
+glm_shots |>
+  filter(season == 2023 & team_id == 17) |>
+  ggplot(aes(x = shot_dist, color = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", subtitle = "LV Aces 2023", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
+
+# 2024 ny liberty
+glm_shots |>
+  filter(season == 2024 & team_id == 9) |>
+  ggplot(aes(x = shot_dist, color = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", subtitle = "NY Liberty 2024", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
 
 ```
 
