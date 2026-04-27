@@ -427,7 +427,8 @@ sim_results_2022 |>
 
 p.adjust(sim_results_2022$p_value, method = "BH") |>
   cbind(sim_results_2022) |>
-  select(-c(4:10003))
+  select(-c(4:10003)) |>
+  slice_min(p_value, n = 6)
 
 # let's look at games that have low p-values
 df_shots |>
@@ -453,14 +454,26 @@ sample_games <- sim_results_2022 |>
   slice_min(p_value, n = 6) |>
   pull(game_id)
 
-ggplot(filter(longer_2022, game_id %in% sample_games), aes(x = sim_value)) +
+longer_2022 |> filter(game_id %in% sample_games) |>
+  mutate(game_id = as_factor(game_id),
+         game_id = game_id |> recode_values(
+                "401391727" ~ "vs. LA Sparks",
+                "401391828" ~ "vs. IN Fever",
+                "401391678" ~ "vs. MN Lynx",
+                "401455683" ~ "vs. CT Sun",
+                "401391747" ~ "vs. CHI Sky",
+                "401391792" ~ "vs. NY Liberty")) |>
+  
+  ggplot(aes(x = sim_value)) +
   geom_density() +
   geom_vline(
-    data = filter(sim_results_2022, game_id %in% sample_games),
     aes(xintercept = observed_stat),
     color = "red"
   ) +
-  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2022 LV Aces On Simulated Null Distribution")
+  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2022 LV Aces",
+  subtitle = "On simulated null distributions",
+   x = "Streak Statistics",
+  y = "Density")
 ```
 
 ```{r}
@@ -498,9 +511,12 @@ sim_results_2023 |>
   select(-c(3:10002)) |>
   arrange(p_value)
 
-p.adjust(sim_results_2023$p_value, method = "BH") |>
-  cbind(sim_results_2023) |>
-  select(-c(4:10003))
+sim_results_2023 |> pull(p_value) |>
+  na.omit() |>
+  p.adjust(method = "BH") |>
+  cbind(sim_results_2023 |> filter(!is.na(p_value))) |>
+  select(-c(4:10003)) |>
+  slice_min(p_value, n = 6)
 
 
 df_shots |>
@@ -526,14 +542,26 @@ sample_games <- sim_results_2023 |>
   slice_min(p_value, n = 6) |>
   pull(game_id)
 
-ggplot(filter(longer_2023, game_id %in% sample_games), aes(x = sim_value)) +
+longer_2023 |>
+  filter(game_id %in% sample_games) |>
+  mutate(game_id = as_factor(game_id),
+         game_id = game_id |> recode_values(
+                "401507310" ~ "vs. ATL Dream",
+                "401578554" ~ "vs. CHI Sky",
+                "401578574" ~ "vs. NY Liberty 1",
+                "401507292" ~ "vs. NY Liberty 2",
+                "401507248" ~ "vs. LA Sparks",
+                "401507243" ~ "vs. PHX Mercury")
+               ) |>
+ggplot(aes(x = sim_value)) +
   geom_density() +
-  geom_vline(
-    data = filter(sim_results_2023, game_id %in% sample_games),
-    aes(xintercept = observed_stat),
+  geom_vline(aes(xintercept = observed_stat),
     color = "red"
   ) +
-  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2023 LV Aces On Simulated Null Distribution")
+  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2023 LV Aces",
+                                                subtitle = "On simulated null distributions",
+                                                x = "Streak Statistics",
+                                                y = "Density")
 ```
 
 
@@ -574,7 +602,8 @@ sim_results_2024 |>
 
 p.adjust(sim_results_2024$p_value, method = "BH") |>
   cbind(sim_results_2024) |>
-  select(-c(4:10003))
+  select(-c(4:10003)) |>
+  slice_min(p_value, n = 6)
 
 
 df_shots |>
@@ -598,14 +627,27 @@ sample_games <- sim_results_2024 |>
   slice_min(p_value, n = 6) |>
   pull(game_id)
 
-ggplot(filter(longer_2024, game_id %in% sample_games), aes(x = sim_value)) +
+longer_2024 |>
+  filter(game_id %in% sample_games) |>
+  mutate(game_id = as_factor(game_id),
+         game_id = game_id |> recode_values(
+                "401620311" ~ "vs. ATL Dream 1",
+                "401677672" ~ "vs. MN Lynx",
+                "401620252" ~ "vs. PHX Mercury",
+                "401721255" ~ "vs. ATL Dream 2",
+                "401620309" ~ "vs. LA Sparks",
+                "401620263" ~ "vs. IN Fever")
+               ) |>
+ggplot(aes(x = sim_value)) +
   geom_density() +
   geom_vline(
-    data = filter(sim_results_2024, game_id %in% sample_games),
     aes(xintercept = observed_stat),
     color = "red"
   ) +
-  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2024 NY Liberty On Simulated Null Distribution")
+  facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2024 NY Liberty",
+                                                subtitle = "On simulated null distributions",
+                                                x = "Streak Statistics",
+                                                y = "Density")
 ```
 
 What happened during these games?
