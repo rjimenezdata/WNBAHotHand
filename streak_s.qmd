@@ -13,6 +13,7 @@ library(sportyR)
 library(tidyverse)
 library(lme4) 
 library(splines)
+library(viridis)
 
 df_shots <- read.csv("df_shots.csv") |>
   select(-X) |>
@@ -384,6 +385,15 @@ glm_shots |>
 glm_shots |>
   filter(season == 2024 & team_id == 9) |>
   ggplot(aes(x = shot_dist, color = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", subtitle = "NY Liberty 2024", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1))
+
+glm_shots |>
+  mutate(group = case_when(
+      team_id == 17 & season == 2022 ~ "2022 LV Aces",
+      team_id == 17 & season == 2023 ~ "2023 LV Aces",
+      team_id == 9  & season == 2024 ~ "2024 NY Liberty",
+      TRUE                           ~ "Rest of League"
+    )) |>
+  ggplot(aes(x = shot_dist, color = streak_before, lty = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length", lty = "") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1)) + facet_wrap(~group) + guides(lty = "none") + scale_color_discrete(palette = "Okabe-Ito")
 
 ```
 
