@@ -230,8 +230,9 @@ results_2022 |>
   hist()
 
 results_2022 |>
-  mutate(p_adj = p.adjust(p_value, "BH"))
-
+  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  arrange(p_value) |>
+  select(game_id, observed, p_value, p_adj)
 
 ```
 
@@ -259,7 +260,10 @@ results_2023 |>
   hist()
 
 results_2023 |>
-  mutate(p_adj = p.adjust(p_value, "BH"))
+  na.omit(p_value) |>
+  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  arrange(p_value) |>
+  select(game_id, observed, p_value, p_adj)
 
 results_2023 |>
   mutate(
@@ -293,7 +297,10 @@ results_2024 |>
   hist()
 
 results_2024 |>
-  mutate(p_adj = p.adjust(p_value, "BH"))
+  na.omit(p_value) |>
+  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  arrange(p_value) |>
+  select(game_id, observed, p_value, p_adj)
 
 results_2024 |>
   mutate(
@@ -483,7 +490,7 @@ longer_2022 |> filter(game_id %in% sample_games) |>
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2022 LV Aces",
   subtitle = "On simulated null distributions",
    x = "Streak Statistics",
-  y = "Density")
+  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
 ```
 
 ```{r}
@@ -571,7 +578,7 @@ ggplot(aes(x = sim_value)) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2023 LV Aces",
                                                 subtitle = "On simulated null distributions",
                                                 x = "Streak Statistics",
-                                                y = "Density")
+                                                y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
 ```
 
 
@@ -657,7 +664,7 @@ ggplot(aes(x = sim_value)) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2024 NY Liberty",
                                                 subtitle = "On simulated null distributions",
                                                 x = "Streak Statistics",
-                                                y = "Density")
+                                                y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
 ```
 
 What happened during these games?
