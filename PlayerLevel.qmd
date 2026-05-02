@@ -1,0 +1,25 @@
+---
+title: "Player Level Analysis"
+author: "Ruben Jimenez"
+format: html
+---
+
+# Libraries & Data
+
+```{r setup}
+library(tidyverse)
+library(wehoop)
+library(sportyR)
+
+df_shots <- read_csv("df_shots.csv") |>
+  select(-`...1`)
+```
+
+# Who was the top scorer?
+
+```{r}
+df_shots |>
+  mutate(athlete_id_1 = as.factor(athlete_id_1)) |>
+  
+```
+

@@ -15,8 +15,8 @@ library(lme4)
 library(splines)
 library(viridis)
 
-df_shots <- read.csv("df_shots.csv") |>
-  select(-X) |>
+df_shots <- read_csv("df_shots.csv") |>
+  dplyr::select(-`...1`) |>
   mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 25, 3, 2),
          scoring_play = as.integer(scoring_play))
 head(df_shots)
@@ -183,6 +183,8 @@ phat_Sstreak <- function(results_sequence, streak_length){
   phat_after_Sstreak
 }
 ```
+
+
 
 ```{r}
 set.seed(619)
@@ -676,3 +678,13 @@ df_shots |>
                         401677672))
 ```
 
+# Summarize How Often Streaks Occur
+
+```{r}
+glm_shots |>
+  group_by(season, team_id, game_id) |>
+  count(streak_group) |>
+  filter(streak_group == "3+") |>
+  group_by(season) |>
+  summarize(number_of_streaks_3 = sum(n))
+```

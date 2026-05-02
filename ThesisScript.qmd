@@ -15,6 +15,7 @@ library(msm)
 library(gt)
 library(sportyR)
 library(patchwork)
+library(ggrepel)
 
 ```
 
@@ -23,6 +24,7 @@ library(patchwork)
 ```{r}
 season_years <- c(2022:2024)
 pbp_data <- load_wnba_pbp(seasons = season_years)
+
 ```
 
 ## Filter down data to only shots from regular and post-season
@@ -44,7 +46,8 @@ shot_data <- pbp_data |>
   mutate(athlete_id_1 = as.factor(athlete_id_1),
          type_text = as.factor(type_text),
          time_elapsed = 2400 - end_game_seconds_remaining,
-         shot_dist = sqrt(((coordinate_x_raw-25)^2) + ((coordinate_y_raw)^2))) |>
+         shot_dist = sqrt(((coordinate_x_raw-25)^2) + ((coordinate_y_raw)^2)),
+         shot_type = if_else(str_detect(text, "three point") | shot_dist > 25, 3, 2)) |>
   arrange(game_id)
 
 shot_data |>
@@ -110,6 +113,95 @@ Original paper uses games as observational units. Why not offensive possessions 
 
 Does using games as observational units mean we can only use game-level variables, like total shots per game per team?
 
+## Load in Regular Season Summaries
+
+```{r}
+season_summ <- read_csv("season_summ.csv") |>
+  dplyr::select(-c(team_sdr:team_abbreviation),
+    -c(team_short_display_name:offensive_assists),
+                -c(offensive_avg48field_goals_made:last_col()),
+                -offensive_brick_index,
+    general_games_played)
+
+```
+
+## Summarize Each Season
+
+```{r}
+# offensive stats: c(offensive_field_goal_pct, offensive_field_goals_attempted, offensive_field_goals_made, offensive_points, offensive_three_point_field_goals_attempted, offensive_three_point_field_goals_made, offensive_three_point_field_goal_pct, offensive_points_in_paint, offensive_three_point_field_goals_attempted, offensive_two_point_field_goals_made, offensive_two_point_field_goals_attempted, offensive_two_point_field_goal_pct)
+
+#fg%
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_field_goal_pct, n = 5)
+
+#fga
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_field_goals_attempted, n = 5)
+
+#fgm
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_field_goals_made, n = 5)
+  
+#pts
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_points, n = 5)
+
+#3pa
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_three_point_field_goals_attempted, n = 5)
+
+#3pm
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_three_point_field_goals_made, n = 5)
+
+#3p fg%
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_three_point_field_goal_pct, n = 5)
+
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_points_in_paint, n = 5)
+
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_three_point_field_goals_attempted, n = 5)
+
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_two_point_field_goals_made, n = 5)
+
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_two_point_field_goals_attempted, n = 5)
+
+season_summ |>
+  filter(season_type == "regular") |>
+  slice_max(offensive_two_point_field_goal_pct, n = 5)
+
+season_summ |>
+  ggplot(aes(x = offensive_three_point_field_goals_attempted, y = offensive_three_point_pct, color = season_type)) + geom_point() + geom_label_repel(data = season_summ[which.max(season_summ$offensive_three_point_pct), ], 
+                   aes(label = paste("Max:", team_display_name, year)),
+                   box.padding = 0.5)
+
+season_summ |>
+  ggplot(aes(x = offensive_field_goals_attempted, y = offensive_field_goal_pct, color = season_type)) + geom_point() + geom_label_repel(data = season_summ[which.max(season_summ$offensive_field_goal_pct), ], 
+                   aes(label = paste("Max:", team_display_name, year)),
+                   box.padding = 0.5)
+
+season_summ |>
+  ggplot(aes(x = offensive_two_point_field_goals_attempted, y = offensive_two_point_field_goal_pct, color = season_type)) + geom_point() + geom_label_repel(data = season_summ[which.max(season_summ$offensive_two_point_field_goal_pct), ], 
+                   aes(label = paste("Max:", team_display_name, year)),
+                   box.padding = 0.5)
+
+```
+
 ## Summary Statistics
 
 ```{r}
@@ -156,29 +248,32 @@ summ_data <- shot_data |>
          game_id = as.factor(game_id),
          scoring_play = as.factor(scoring_play))
 
-summ_data |>
-  group_by(team_id, season) |>
-  summarize("Team" = unique(team_id),
-            "Season" = unique(season),
-    "Mean Shot Distance" = mean(shot_dist),
-            "2-Pt Attempts" = sum(shot_type == 2),
-    "3-Pt Attempts" = sum(shot_type == 3),
-    "FG%" = mean(as.logical(scoring_play)*100),
-    "Games Played" = n_distinct(game_id)
-    ) |>
-  mutate(Team = fct_recode(Team, "LV Aces" = "17", "NY Liberty" = "9")) |>
+summary_data <- shot_data |>
+  group_by(season, team_id) |>
+  summarize(mean_shotdist = mean(shot_dist),
+            attempt_3pt = sum(shot_type == 3),
+            attempt_2pt = sum(shot_type == 2),
+            fgpct_total = mean(scoring_play),
+            fgpct_3pt = sum(shot_type == 3 & scoring_play == T)/attempt_3pt,
+            fgpct_2pt = sum(shot_type == 2 & scoring_play == T)/attempt_2pt) |>
   ungroup() |>
-  select(-c(team_id, season)) |>
-  arrange(Season) |>
-  gt() |>
-  tab_style(
-    style = cell_text(weight = "bold"),
-    locations = cells_column_labels(everything())
-  ) |>
-  tab_header(
-    title = "Summary of Filtered Data"
-  )
-  
+  rename("Mean Shot Dist. (ft)" = mean_shotdist,
+         "3-Pt Attempts" = attempt_3pt,
+         "2-Pt Attempts" = attempt_2pt,
+         "Total FG%" = fgpct_total,
+         "3-Pt FG%" = fgpct_3pt,
+         "2-Pt FG%" = fgpct_2pt)
+
+summary_data |>
+  slice_max(`3-Pt Attempts`, n = 3)
+summary_data |>
+  slice_max(`2-Pt Attempts`, n = 3)
+summary_data |>
+  slice_max(`Total FG%`, n = 3)
+summary_data |>
+  slice_max(`3-Pt FG%`, n = 3)
+summary_data |>
+  slice_max(`2-Pt FG%`, n = 3)
 
 # shot_data |>
 #   filter((team_id == 17 & season == 2022) | (team_id == 17 & season == 2023) | (team_id == 9 & season == 2024)) |>
@@ -229,40 +324,52 @@ Here I inspect whether there seems to be any sort of linear relationship between
 
 ```{r}
 shot_data |>
-  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
-           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
+  group_by(season, team_id, game_id) |>
+  arrange(team_id, season, game_id) |>
+  mutate(last_shot_dist = lag(shot_dist),
          diff_dist = shot_dist - last_shot_dist,
          last_made = lag(scoring_play)) |>
-  ggplot(aes(x = last_shot_dist, y = diff_dist)) + geom_point() + geom_smooth(method = "loess") + labs(title = "Difference in distance from current to last shot \n as a function of the previous shot distance", x = "Previous shot distance", y = "Current minus last shot distance (positive = further)")
+  ungroup() |>
+  ggplot(aes(x = last_shot_dist, y = diff_dist)) + geom_point() + geom_smooth(method = "loess") + labs(title = "Previous shot distance \n vs difference from current shot", x = "Previous shot distance", y = "Current minus last shot distance (positive = further)")
 
 shot_data |>
-  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
-           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
+  group_by(season, team_id, game_id) |>
+  arrange(team_id, season, game_id) |>
+  mutate(last_shot_dist = lag(shot_dist),
          diff_dist = shot_dist - last_shot_dist,
          last_made = lag(scoring_play)) |>
+  ungroup() |>
   ggplot(aes(x = last_shot_dist, y = shot_dist)) + geom_point() + geom_smooth(method = "loess") + labs(title = "Difference in distance from current to last shot \n as a function of the previous shot distance", x = "Previous shot distance", y = "Current minus last shot distance (positive = further)")
 
 shot_data |>
-  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
-           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
+  group_by(season, team_id, game_id) |>
+  arrange(team_id, season, game_id) |>
+  mutate(last_shot_dist = lag(shot_dist),
          diff_dist = shot_dist - last_shot_dist,
-         last_made = as.numeric(lag(scoring_play))) |>
-  filter(is.na(last_made) != TRUE) |>
-  ggplot(aes(x = diff_dist, y = last_made)) + geom_point() + stat_smooth(method = "glm", 
-              method.args = list(family = binomial), 
-              se = FALSE) + labs(title = "Difference in shot distance \n as a function of whether last shot was made", y = "Last shot made? 1 = yes, 0 = no", x = "Current minus last shot distance (positive = further)")
+         last_made = lag(scoring_play)) |>
+  ungroup() |>
+  ggplot(aes(x = diff_dist)) + geom_density()
 
-p <- shot_data |>
-  mutate(shot_dist = sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2)),
-           last_shot_dist = lag(sqrt((coordinate_x_raw^2)+(coordinate_y_raw^2))),
-         diff_dist = shot_dist - last_shot_dist,
-         last_made = as.numeric(lag(scoring_play))) |>
-  filter(is.na(last_made) != TRUE,
-         team_id == 17) |>
-  ggplot(aes(x = diff_dist)) + geom_histogram(bins = 100) + labs(title = "Difference in distance from last to current shot", subtitle = "0 = last shot was a miss, 1 = last shot was made", x = "Current shot distance - previous shot distance (ft)", y = "Frequency")
+```
 
-p + facet_wrap(vars(last_made))
+## How often was a 3-pointer shot after a 2-pointer?
 
+```{r}
+df_shots |>
+  group_by(season, team_id, game_id) |>
+  mutate(last_shot_type = lag(shot_type)) |>
+  ungroup() |>
+  count(shot_type == 3 & last_shot_type == 2,
+        shot_type == 3 & last_shot_type == 3,
+        shot_type == 2 & last_shot_type == 2,
+        shot_type == 2 & last_shot_type == 3) |>
+  rename("threetwo" = `shot_type == 3 & last_shot_type == 2`,
+         "threethree" = `shot_type == 3 & last_shot_type == 3`,
+         "twotwo" = `shot_type == 2 & last_shot_type == 2`,
+         "twothree" = `shot_type == 2 & last_shot_type == 3`) |>
+  pivot_longer(cols = threetwo:twothree) |>
+  filter(value == T) |>
+  ggplot(aes(x = name, y = n)) + geom_segment(yend = 0) + geom_point()
 ```
 
 ## Discretize Time
@@ -310,8 +417,8 @@ df_discrete_lv2022 <- discrete_times |>
 ```{r}
 shot_data |>
   filter(qtr < 5) |>
-  group_by(game_id) |>
-  arrange(game_play_number, .by_group = TRUE) |>
+  group_by(season, game_id, team_id) |>
+  arrange(season, game_id, team_id) |>
   mutate(time_bs = time_elapsed - lag(time_elapsed)) |>
   ungroup() |>
   summarize(mean_timebs = mean(time_bs, na.rm = T),
