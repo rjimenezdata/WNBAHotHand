@@ -14,6 +14,7 @@ library(tidyverse)
 library(lme4) 
 library(splines)
 library(viridis)
+library(glue)
 
 df_shots <- read_csv("df_shots.csv") |>
   dplyr::select(-`...1`) |>
@@ -232,9 +233,14 @@ results_2022 |>
   hist()
 
 results_2022 |>
-  mutate(p_adj = p.adjust(p_value, "BH")) |>
   arrange(p_value) |>
+  mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
   select(game_id, observed, p_value, p_adj)
+
+df_shots |> filter((team_id == 17 & season %in% c(2022, 2023)) | (team_id == 9 & season == 2024)) |> group_by(season, team_id, game_id) |>
+    arrange(season, team_id) |>
+    summarize(streak_stat = streak_stats(scoring_play, 3)) |>
+  unnest_wider(streak_stat)
 
 ```
 
@@ -263,8 +269,8 @@ results_2023 |>
 
 results_2023 |>
   na.omit(p_value) |>
-  mutate(p_adj = p.adjust(p_value, "BH")) |>
   arrange(p_value) |>
+  mutate(p_adj = p.adjust(p_value, "BH")) |>
   select(game_id, observed, p_value, p_adj)
 
 results_2023 |>
@@ -404,9 +410,22 @@ glm_shots |>
     )) |>
   ggplot(aes(x = shot_dist, color = streak_before, lty = streak_before)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length", lty = "") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1)) + facet_wrap(~group) + guides(lty = "none") + scale_color_discrete(palette = "Okabe-Ito")
 
+glm_shots |>
+  ggplot(aes(x = shot_dist)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(title = "Shot Density Conditional on Previous Shot Streak Length", y = "Proportion of Shots", x = "Shot Distance (ft)", color = "Streak Length", lty = "") + scale_x_continuous(limits = c(0, 60)) + scale_y_continuous(limits = c(0, .1)) + facet_wrap(~streak_before)
+
+glm_shots |>
+  mutate(streak_before = if_else(streak_before == "3+", "3+", "< 3")) |>
+  group_by(season, team_id, streak_before) |>
+  summarize(shot_dist = mean(shot_dist)) |>
+  ungroup() |>
+  pivot_wider(names_from = streak_before, values_from = shot_dist) |>
+  ggplot(aes(x = `< 3`, y = `3+`)) + geom_point(aes(color = as.factor(season))) + geom_smooth(method = "gam", formula = y ~ x, se = F) + theme_minimal() + theme(panel.grid.minor = element_blank(),
+                                                                                                                                                                 legend.position = "bottom") + labs(x = "Streak length < 3", y = "Streak length 3+", title = "Average shot distance (ft)", color = "Season") + scale_color_discrete(palette = "Okabe-Ito") + scale_x_continuous(limits = c(11, 16)) + scale_y_continuous(limits = c(11, 16))
+
 ```
 
 ```{r}
+set.seed(619)
 n_sims = 10000
 
 sim_results_2022 <- glm_shots_predicted |>
@@ -496,6 +515,7 @@ longer_2022 |> filter(game_id %in% sample_games) |>
 ```
 
 ```{r}
+set.seed(619)
 sim_results_2023 <- glm_shots_predicted |>
   filter(team_id == 17,
          season == 2023) |>
@@ -585,6 +605,7 @@ ggplot(aes(x = sim_value)) +
 
 
 ```{r}
+set.seed(619)
 sim_results_2024 <- glm_shots_predicted |>
   filter(team_id == 9,
          season == 2024) |>
@@ -623,7 +644,6 @@ p.adjust(sim_results_2024$p_value, method = "BH") |>
   cbind(sim_results_2024) |>
   select(-c(4:10003)) |>
   slice_min(p_value, n = 6)
-
 
 df_shots |>
   filter(team_id == 9,
@@ -682,9 +702,20 @@ df_shots |>
 
 ```{r}
 glm_shots |>
-  group_by(season, team_id, game_id) |>
-  count(streak_group) |>
-  filter(streak_group == "3+") |>
   group_by(season) |>
-  summarize(number_of_streaks_3 = sum(n))
+  summarize(n_games = n_distinct(game_id),
+            num_streaks_3plus = sum(streak_before == "3+"),
+            avg_nstreaks = num_streaks_3plus/n_games) |>
+  write_csv("avg_nstreaks.csv")
+
+glm_shots |>
+  mutate(streak_before = streak - scoring_play) |>
+  group_by(season) |>
+  summarize(mean_streak = mean(streak_before)) |>
+  write_csv("mean_streaklength.csv")
+
+glm_shots |>
+  group_by(season, team_id, game_id) |>
+  count(streak_before == "3+") |>
+  filter(`streak_before == "3+"` == T)
 ```
