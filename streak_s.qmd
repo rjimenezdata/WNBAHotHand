@@ -240,8 +240,10 @@ results_2022 |>
 results_2022 |>
   arrange(p_value) |>
   mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
-  select(game_id, observed, p_value, p_adj) |>
-  filter()
+  pull(observed) |>
+  t.test(mu = 0)
+
+
 
 df_shots |> filter((team_id == 17 & season %in% c(2022, 2023)) | (team_id == 9 & season == 2024)) |> group_by(season, team_id, game_id) |>
     arrange(season, team_id) |>
@@ -280,6 +282,13 @@ results_2023 |>
   select(game_id, observed, p_value, p_adj)
 
 results_2023 |>
+  na.omit(p_value) |>
+  arrange(p_value) |>
+  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  pull(observed) |>
+  t.test(mu = 0)
+
+results_2023 |>
   mutate(
     perm_mean = map_dbl(perm_dist, ~ mean(.x, na.rm = TRUE)),
     bias_adj = observed - perm_mean
@@ -315,6 +324,13 @@ results_2024 |>
   mutate(p_adj = p.adjust(p_value, "BH")) |>
   arrange(p_value) |>
   select(game_id, observed, p_value, p_adj)
+
+results_2024 |>
+  na.omit(p_value) |>
+  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  arrange(p_value) |>
+  pull(observed) |>
+  t.test(mu = 0)
 
 results_2024 |>
   mutate(
