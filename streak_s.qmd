@@ -237,6 +237,12 @@ results_2022 |>
   mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
   select(game_id, observed, p_value, p_adj)
 
+results_2022 |>
+  arrange(p_value) |>
+  mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
+  select(game_id, observed, p_value, p_adj) |>
+  filter()
+
 df_shots |> filter((team_id == 17 & season %in% c(2022, 2023)) | (team_id == 9 & season == 2024)) |> group_by(season, team_id, game_id) |>
     arrange(season, team_id) |>
     summarize(streak_stat = streak_stats(scoring_play, 3)) |>
@@ -519,6 +525,18 @@ longer_2022 |> filter(game_id %in% sample_games) |>
   subtitle = "On simulated null distributions",
    x = "Streak Statistics",
   y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
+
+longer_2022 |>
+  filter(game_id == 401391727) |>
+  ggplot(aes(x = sim_value)) + 
+  geom_density() +
+  geom_vline(
+    aes(xintercept = observed_stat),
+    color = "red"
+  ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
+  subtitle = "Over simulated null distribution",
+   x = "Streak Statistics",
+  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.004")
 ```
 
 ```{r}
@@ -608,6 +626,7 @@ ggplot(aes(x = sim_value)) +
                                                 subtitle = "On simulated null distributions",
                                                 x = "Streak Statistics",
                                                 y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
+
 ```
 
 
@@ -738,3 +757,23 @@ glm_shots |>
   write_csv("n_streakspergame.csv")
 
 ```
+
+## Summary of main streak statistic
+
+```{r}
+df_shots |>
+  group_by(season, team_id, game_id) |>
+  summarize(streak_stats = phat_Sstreak_Fstreak(scoring_play, 3)) |>
+  ggplot(aes(x = streak_stats)) + geom_density() + theme_minimal() + theme(panel.grid.minor = element_blank()) + labs(x = "Conditional Shot Probability Difference",
+                                                                                                                      y = "Density",
+                                                                                                                      title = "Streak Statistic Distribution Across the League",
+                                                                                                                      subtitle = "Mean = -0.143, SD = 0.287")
+
+df_shots |>
+  group_by(season, team_id, game_id) |>
+  summarize(streak_stats = phat_Sstreak_Fstreak(scoring_play, 3)) |>
+  ungroup() |>
+  summarize(mean = mean(streak_stats, na.rm = T),
+            sd = sd(streak_stats, na.rm = T))
+```
+
