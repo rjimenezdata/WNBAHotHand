@@ -461,7 +461,7 @@ glm_shots |>
   summarize(shot_dist = mean(shot_dist)) |>
   ungroup() |>
   pivot_wider(names_from = streak_before, values_from = shot_dist) |>
-  ggplot(aes(x = `< 3`, y = `3+`)) + geom_point(aes(color = as.factor(season))) + geom_smooth(method = "gam", formula = y ~ x, se = F) + theme_minimal() + theme(panel.grid.minor = element_blank(),
+  ggplot(aes(x = `< 3`, y = `3+`)) + geom_point(aes(color = as.factor(season))) + geom_abline(intercept = 0, slope = 1) + theme_minimal() + theme(panel.grid.minor = element_blank(),
                                                                                                                                                                  legend.position = "bottom") + labs(x = "Streak length < 3", y = "Streak length 3+", title = "Average shot distance (ft)", color = "Season") + scale_color_discrete(palette = "Okabe-Ito") + scale_x_continuous(limits = c(11, 16)) + scale_y_continuous(limits = c(11, 16))
 
 ```
