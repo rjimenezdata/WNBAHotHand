@@ -565,7 +565,7 @@ longer_2022 |>
   ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over simulated null distribution",
    x = "Streak Statistics",
-  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.004")
+  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.00414")
 ```
 
 ```{r}
