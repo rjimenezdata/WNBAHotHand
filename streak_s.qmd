@@ -250,6 +250,19 @@ df_shots |> filter((team_id == 17 & season %in% c(2022, 2023)) | (team_id == 9 &
     summarize(streak_stat = streak_stats(scoring_play, 3)) |>
   unnest_wider(streak_stat)
 
+# game_id == 401391727
+
+results_2022 |> 
+  unnest_longer(perm_dist) |>
+  filter(game_id == 401391727) |>
+  ggplot(aes(x = perm_dist)) + geom_density() + geom_vline(
+    aes(xintercept = observed),
+    color = "red"
+  ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
+  subtitle = "Over permuted distribution",
+   x = "Streak Statistics",
+  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.004")
+
 ```
 
 ```{r}
