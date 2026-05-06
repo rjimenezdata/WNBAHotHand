@@ -237,12 +237,6 @@ results_2022 |>
   mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
   select(game_id, observed, p_value, p_adj)
 
-results_2022 |>
-  arrange(p_value) |>
-  mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
-  pull(observed) |>
-  t.test(mu = 0)
-
 
 
 df_shots |> filter((team_id == 17 & season %in% c(2022, 2023)) | (team_id == 9 & season == 2024)) |> group_by(season, team_id, game_id) |>
@@ -338,12 +332,6 @@ results_2024 |>
   arrange(p_value) |>
   select(game_id, observed, p_value, p_adj)
 
-results_2024 |>
-  na.omit(p_value) |>
-  mutate(p_adj = p.adjust(p_value, "BH")) |>
-  arrange(p_value) |>
-  pull(observed) |>
-  t.test(mu = 0)
 
 results_2024 |>
   mutate(
