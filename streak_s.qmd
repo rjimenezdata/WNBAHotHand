@@ -782,9 +782,13 @@ glm_shots |>
 glm_shots |>
   group_by(season, team_id, game_id) |>
   summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
-            make_streaks = sum(as.numeric(streak_before == "3+"))) |>
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
   ungroup() |>
   write_csv("n_streakspergame.csv")
+
+df_shots |> filter(game_id == 401391655, team_id == 3)
 
 ```
 
@@ -798,6 +802,33 @@ df_shots |>
                                                                                                                       y = "Density",
                                                                                                                       title = "Streak Statistic Distribution Across the League",
                                                                                                                       subtitle = "Mean = -0.143, SD = 0.287")
+
+df_shots |>
+  mutate(group = case_when(
+    team_id == 17 & season == 2022 ~ "LV Aces 2022",
+    team_id == 17 & season == 2023 ~ "LV Aces 2023",
+    team_id == 9 & season == 2024 ~ "NY Liberty 2024",
+    TRUE ~ "Rest of League"
+  )) |>
+  group_by(group, game_id) |>
+  summarize(streak_stats = phat_Sstreak_Fstreak(scoring_play, 3)) |>
+    ggplot(aes(x = streak_stats)) + geom_density() + theme_minimal() + facet_wrap(~group)
+
+df_shots |>
+  mutate(group = case_when(
+    team_id == 17 & season == 2022 ~ "LV Aces 2022",
+    team_id == 17 & season == 2023 ~ "LV Aces 2023",
+    team_id == 9 & season == 2024 ~ "NY Liberty 2024",
+    TRUE ~ "Rest of League"
+  )) |>
+  group_by(group, game_id) |>
+  summarize(streak_stats = phat_Sstreak_Fstreak(scoring_play, 3)) |>
+  ungroup() |>
+  group_by(group) |>
+  summarize(mean_diff = mean(streak_stats, na.rm = T),
+            sd_diff = sd(streak_stats, na.rm = T))
+
+
 
 df_shots |>
   group_by(season, team_id, game_id) |>
