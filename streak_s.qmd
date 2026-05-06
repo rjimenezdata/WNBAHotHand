@@ -799,7 +799,7 @@ df_shots |>
   group_by(season, team_id, game_id) |>
   summarize(streak_stats = phat_Sstreak_Fstreak(scoring_play, 3)) |>
   ggplot(aes(x = streak_stats)) + geom_density() + theme_minimal()  + geom_vline(aes(xintercept = mean(streak_stats, na.rm = T), color = "red")) +  theme(panel.grid.minor = element_blank(),
-                                                                                                                                                          legend.position = "none") + labs(x = "Conditional Shot Probability Difference",
+                                                                                                                                                          legend.position = "none") + labs(x = "Difference in Conditional Shot Success Proportion",
                                                                                                                       y = "Density",
                                                                                                                       title = "Streak Statistic Distribution Across the League",
                                                                                                                       subtitle = "Mean = -0.143, SD = 0.287")
