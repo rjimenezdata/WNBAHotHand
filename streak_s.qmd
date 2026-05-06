@@ -926,10 +926,17 @@ perm2024 <- read_csv("2024_permutations.csv") |>
   mutate(p_valueperm = p_value) |>
   dplyr::select(-p_value)
 
+# "observed stat" from simulations
+# "observed" from permutations
+# "diff" from unadjusted t-tests
+
 pvalues_2022 |>
   left_join(unadj_2022, by = "game_id",
             suffix = c("sim", "unadj")) |>
-  left_join(perm2022, by = "game_id")
+  left_join(perm2022, by = "game_id") |>
+  write_csv("joinedpvalues2022.csv")
+
+
 
 pvalues_2022 |>
   left_join(unadj_2022, by = "game_id",
@@ -941,7 +948,19 @@ pvalues_2023 |>
   left_join(unadj_2023, by = "game_id",
             suffix = c("sim", "unadj")) |>
   left_join(perm2023, by = "game_id") |>
+  write_csv("joinedpvalues2023.csv")
+
+pvalues_2023 |>
+  left_join(unadj_2023, by = "game_id",
+            suffix = c("sim", "unadj")) |>
+  left_join(perm2023, by = "game_id") |>
   ggplot(aes(x = p_valuesim, y = p_valueperm)) + geom_point() + geom_abline(slope = 1, intercept = 0)
+
+pvalues_2024 |>
+  left_join(unadj_2024, by = "game_id",
+            suffix = c("sim", "unadj")) |>
+  left_join(perm2024, by = "game_id") |>
+  write_csv("joinedpvalues2024.csv")
 
 pvalues_2024 |>
   left_join(unadj_2024, by = "game_id",
