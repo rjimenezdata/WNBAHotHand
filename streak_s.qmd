@@ -509,7 +509,8 @@ sim_results_2022 |>
 p.adjust(sim_results_2022$p_value, method = "BH") |>
   cbind(sim_results_2022) |>
   select(-c(4:10003)) |>
-  slice_min(p_value, n = 6)
+  slice_min(p_value, n = 6) |>
+  write_csv("2022_pvalues.csv")
 
 # let's look at games that have low p-values
 df_shots |>
@@ -610,7 +611,8 @@ sim_results_2023 |> pull(p_value) |>
   p.adjust(method = "BH") |>
   cbind(sim_results_2023 |> filter(!is.na(p_value))) |>
   select(-c(4:10003)) |>
-  slice_min(p_value, n = 6)
+  slice_min(p_value, n = 6) |>
+  write_csv("2023_pvalues.csv")
 
 
 df_shots |>
@@ -699,7 +701,8 @@ sim_results_2024 |>
 p.adjust(sim_results_2024$p_value, method = "BH") |>
   cbind(sim_results_2024) |>
   select(-c(4:10003)) |>
-  slice_min(p_value, n = 6)
+  slice_min(p_value, n = 6) |>
+  write_csv("2024_pvalues.csv")
 
 df_shots |>
   filter(team_id == 9,
