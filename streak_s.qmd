@@ -763,7 +763,7 @@ glm_shots |>
   mutate(streak_before = streak - scoring_play,
          miss_streak_before = miss_streak - (1 - scoring_play)) |>
   group_by(season) |>
-  filter(streak_before > 0)
+  filter(streak_before >= 3) |>
   summarize(mean_streak = mean(streak_before)) |>
   write_csv("mean_streaklength.csv")
   
@@ -772,7 +772,7 @@ glm_shots |>
   mutate(streak_before = streak - scoring_play,
          miss_streak_before = miss_streak - (1 - scoring_play)) |>
   group_by(season) |>
-  filter(miss_streak_before > 0) |>
+  filter(miss_streak_before >= 3) |>
   summarize(mean_missstreak = mean(miss_streak_before)) |>
   write_csv("mean_missstreaklength.csv")
 
