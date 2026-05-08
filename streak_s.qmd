@@ -254,7 +254,7 @@ results_2022 |>
     color = "red"
   ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over permuted distribution",
-   x = "Streak Statistics",
+   x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
   y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.004")
 
 ```
@@ -541,7 +541,7 @@ longer_2022 |> filter(game_id %in% sample_games) |>
   ) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2022 LV Aces",
   subtitle = "On simulated null distributions",
-   x = "Streak Statistics",
+   x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
   y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
 
 longer_2022 |>
@@ -553,7 +553,7 @@ longer_2022 |>
     color = "red"
   ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over simulated null distribution",
-   x = "Streak Statistics",
+   x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
   y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.00495")
 ```
 
@@ -642,7 +642,7 @@ ggplot(aes(x = sim_value)) +
   ) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2023 LV Aces",
                                                 subtitle = "On simulated null distributions",
-                                                x = "Streak Statistics",
+                                                x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
                                                 y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
 
 ```
@@ -729,7 +729,7 @@ ggplot(aes(x = sim_value)) +
   ) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2024 NY Liberty",
                                                 subtitle = "On simulated null distributions",
-                                                x = "Streak Statistics",
+                                                x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
                                                 y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
 ```
 
@@ -796,7 +796,7 @@ df_shots |>
   group_by(season, team_id, game_id) |>
   summarize(streak_stats = phat_Sstreak_Fstreak(scoring_play, 3)) |>
   ggplot(aes(x = streak_stats)) + geom_density() + theme_minimal()  + geom_vline(aes(xintercept = mean(streak_stats, na.rm = T), color = "red")) +  theme(panel.grid.minor = element_blank(),
-                                                                                                                                                          legend.position = "none") + labs(x = "Difference in Conditional Shot Success Proportion",
+                                                                                                                                                          legend.position = "none") + labs(x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
                                                                                                                       y = "Density",
                                                                                                                       title = "Streak Statistic Distribution Across the League",
                                                                                                                       subtitle = "Mean = -0.143, SD = 0.287")
