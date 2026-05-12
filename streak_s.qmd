@@ -455,6 +455,31 @@ glm_shots |>
 
 ```
 
+## Fit New Model
+
+```{r}
+df_shots_select <- df_shots |>
+                       mutate(shot_dist = as.numeric(scale(shot_dist)),
+                              time_elapsed = as.numeric(scale(time_elapsed)),
+                              type_id = as.factor(type_id),
+                              shot_type = as.factor(shot_type),
+                              team_id = as.factor(team_id),
+                              season = as.factor(season),
+                              season_type = as.factor(season_type),
+                              athlete_id_1 = as.factor(athlete_id_1)) |>
+  drop_na(athlete_id_1)
+
+m_full <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id) + (1|team_id:season), data = df_shots_select, family = binomial(link = "logit"))
+
+m_red <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id), data = df_shots_select, family = binomial(link = "logit"))
+
+summary(m_full)
+summary(m_red)
+AIC(m_full)
+AIC(m_red)
+```
+
+
 ```{r}
 set.seed(619)
 n_sims = 10000
