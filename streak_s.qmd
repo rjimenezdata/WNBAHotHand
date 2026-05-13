@@ -458,6 +458,7 @@ glm_shots |>
 ## Fit New Model
 
 ```{r}
+set.seed(619)
 df_shots_select <- df_shots |>
                        mutate(shot_dist = as.numeric(scale(shot_dist)),
                               time_elapsed = as.numeric(scale(time_elapsed)),
@@ -467,17 +468,67 @@ df_shots_select <- df_shots |>
                               season = as.factor(season),
                               season_type = as.factor(season_type),
                               athlete_id_1 = as.factor(athlete_id_1)) |>
+  arrange(team_id, game_id, time_elapsed) |>
   drop_na(athlete_id_1) |>
-  dplyr::select(scoring_play, shot_dist, time_elapsed, type_id, shot_type, season_type, team_id, season, athlete_id_1)
+  dplyr::select(scoring_play, shot_dist, time_elapsed, type_id, shot_type, season_type, team_id, season, athlete_id_1, game_id, sequence_number)
 
 m_full <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id) + (1|team_id:season), data = df_shots_select, family = binomial(link = "logit"))
 
 m_red <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id), data = df_shots_select, family = binomial(link = "logit"))
 
+m_rnd <- glmer(scoring_play ~ shot_dist + time_elapsed + season_type + shot_type + (1 | team_id) + (1 | athlete_id_1) + (1 | season:team_id), data = df_shots_select, family = binomial(link = "logit"))
+
+m_rnd2 <- glmer(scoring_play ~ shot_dist + time_elapsed + season_type + shot_type + team_id*season + (1 | athlete_id_1), data = df_shots_select, family = binomial(link = "logit"))
+
 summary(m_full)
 summary(m_red)
 AIC(m_full)
 AIC(m_red)
+summary(m_rnd)
+AIC(m_rnd)
+summary(m_rnd2)
+AIC(m_rnd2)
+vif(m_rnd2)
+
+preds <- predict(m_rnd2, newdata = df_shots_select, type = "response")
+as.tibble(preds)
+
+glm_shots_predicted2 <- df_shots_select |>
+  cbind(preds) |>
+  relocate(preds, scoring_play) |>
+  mutate(
+    miss_group = cumsum(lag(scoring_play, default = 0) == 0),  # resets after a miss
+    streak = ave(scoring_play, miss_group, FUN = cumsum),      # running makes within streak
+    after_3_makes = ifelse(lag(streak, default = 0) >= 3, 1, 0),
+    
+    make_group = cumsum(lag(scoring_play, default = 0) == 1),
+    miss_streak = ave(1 - scoring_play, make_group, FUN = cumsum),
+    after_3_misses = ifelse(lag(miss_streak, default = 0) >= 3, 1, 0),
+    
+    sequence_type = case_when(after_3_misses == 1 ~ 0,
+                              after_3_makes == 1 ~ 1,
+                              after_3_makes == 0 & after_3_misses == 0 ~ 2),
+    streak_group = if_else(streak >= 3, "3+", "0-2"),
+    streak_group = factor(streak_group, levels = c("0-2", "3+")),
+    streak_group_2 = case_when(streak == 0 ~ "0",
+                               streak == 1 ~ "1",
+                               streak == 2 ~ "2",
+                               streak == 3 ~ "3",
+                               streak >= 4 ~ "4+"),
+    streak_before = streak - scoring_play,
+    streak_before = case_when(streak_before == 0 ~ "0",
+                               streak_before == 1 ~ "1",
+                               streak_before == 2 ~ "2",
+                               streak_before >= 3 ~ "3+"),
+    miss_streak_before = miss_streak - (1 - scoring_play),
+miss_streak_before = case_when(
+  miss_streak_before == 0 ~ "0",
+  miss_streak_before == 1 ~ "1",
+  miss_streak_before == 2 ~ "2",
+  miss_streak_before >= 3 ~ "3+"
+)
+  ) |>
+  ungroup()
 ```
 
 
@@ -485,7 +536,7 @@ AIC(m_red)
 set.seed(619)
 n_sims = 10000
 
-sim_results_2022 <- glm_shots_predicted |>
+sim_results_2022 <- glm_shots_predicted2 |>
   filter(team_id == 17,
          season == 2022) |>
   arrange(game_id, sequence_number) |>
@@ -497,7 +548,7 @@ sim_results_2022 <- glm_shots_predicted |>
       replicate(
         n_sims,
         phat_Sstreak_Fstreak(
-          rbinom(n = n(), size = 1, prob = phat),
+          rbinom(n = n(), size = 1, prob = preds),
           3
         )
       )
@@ -522,8 +573,7 @@ sim_results_2022 |>
 
 p.adjust(sim_results_2022$p_value, method = "BH") |>
   cbind(sim_results_2022) |>
-  select(-c(4:10003)) |>
-  write_csv("2022_pvalues.csv")
+  select(-c(4:10003))
 
 # let's look at games that have low p-values
 df_shots |>
@@ -585,7 +635,7 @@ longer_2022 |>
 
 ```{r}
 set.seed(619)
-sim_results_2023 <- glm_shots_predicted |>
+sim_results_2023 <- glm_shots_predicted2 |>
   filter(team_id == 17,
          season == 2023) |>
   arrange(game_id, sequence_number) |>
@@ -597,7 +647,7 @@ sim_results_2023 <- glm_shots_predicted |>
       replicate(
         n_sims,
         phat_Sstreak_Fstreak(
-          rbinom(n = n(), size = 1, prob = phat),
+          rbinom(n = n(), size = 1, prob = preds),
           3
         )
       )
@@ -623,8 +673,7 @@ sim_results_2023 |> pull(p_value) |>
   na.omit() |>
   p.adjust(method = "BH") |>
   cbind(sim_results_2023 |> filter(!is.na(p_value))) |>
-  select(-c(4:10003)) |>
-  write_csv("2023_pvalues.csv")
+  select(-c(4:10003)) 
 
 
 df_shots |>
@@ -676,7 +725,7 @@ ggplot(aes(x = sim_value)) +
 
 ```{r}
 set.seed(619)
-sim_results_2024 <- glm_shots_predicted |>
+sim_results_2024 <- glm_shots_predicted2 |>
   filter(team_id == 9,
          season == 2024) |>
   arrange(game_id, sequence_number) |>
@@ -688,7 +737,7 @@ sim_results_2024 <- glm_shots_predicted |>
       replicate(
         n_sims,
         phat_Sstreak_Fstreak(
-          rbinom(n = n(), size = 1, prob = phat),
+          rbinom(n = n(), size = 1, prob = preds),
           3
         )
       )
@@ -814,6 +863,59 @@ glm_shots |>
 df_shots |> filter(game_id == 401391655, team_id == 3)
 
 ```
+
+## Join number of streaks with p-values
+
+```{r}
+p.adjust(sim_results_2022$p_value, method = "BH") |>
+  cbind(sim_results_2022) |>
+  select(-c(4:10003)) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 17, season == 2022) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id")) |>
+  write_csv("2022_pvalues.csv")
+
+p.adjust(sim_results_2023$p_value, method = "BH") |>
+  cbind(sim_results_2023) |>
+  select(-c(4:10003)) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 17, season == 2023) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id")) |>
+  write_csv("2023_pvalues.csv")
+
+
+p.adjust(sim_results_2024$p_value, method = "BH") |>
+  cbind(sim_results_2024) |>
+  select(-c(4:10003)) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 9, season == 2024) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id")) |>
+  write_csv("2024_pvalues.csv")
+# |>
+#   write_csv("2022_pvalues.csv")
+```
+
 
 ## Summary of main streak statistic
 
