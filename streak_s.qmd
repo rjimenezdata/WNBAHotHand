@@ -15,6 +15,8 @@ library(lme4)
 library(splines)
 library(viridis)
 library(glue)
+library(janitor)
+library(broom.mixed)
 
 df_shots <- read_csv("df_shots.csv") |>
   dplyr::select(-`...1`) |>
@@ -235,7 +237,18 @@ results_2022 |>
 results_2022 |>
   arrange(p_value) |>
   mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
-  select(game_id, observed, p_value, p_adj)
+  select(game_id, observed, p_value, p_adj) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 17, season == 2022) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id")) |>
+  write_csv("2022_permutations.csv")
 
 
 
@@ -286,7 +299,18 @@ results_2023 |>
   na.omit(p_value) |>
   arrange(p_value) |>
   mutate(p_adj = p.adjust(p_value, "BH")) |>
-  select(game_id, observed, p_value, p_adj)
+  select(game_id, observed, p_value, p_adj) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 17, season == 2023) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id")) |>
+  write_csv("2023_permutations.csv")
 
 results_2023 |>
   na.omit(p_value) |>
@@ -330,7 +354,18 @@ results_2024 |>
   na.omit(p_value) |>
   mutate(p_adj = p.adjust(p_value, "BH")) |>
   arrange(p_value) |>
-  select(game_id, observed, p_value, p_adj)
+  select(game_id, observed, p_value, p_adj) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 9, season == 2024) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id")) |>
+  write_csv("2024_permutations.csv")
 
 
 results_2024 |>
@@ -472,12 +507,15 @@ df_shots_select <- df_shots |>
   drop_na(athlete_id_1) |>
   dplyr::select(scoring_play, shot_dist, time_elapsed, type_id, shot_type, season_type, team_id, season, athlete_id_1, game_id, sequence_number)
 
-m_full <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id) + (1|team_id:season), data = df_shots_select, family = binomial(link = "logit"))
+# m_full <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id) + (1|team_id:season), data = df_shots_select, family = binomial(link = "logit"))
+# 
+# m_red <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id), data = df_shots_select, family = binomial(link = "logit"))
+# 
+# m_rnd <- glmer(scoring_play ~ shot_dist + time_elapsed + season_type + shot_type + (1 | team_id) + (1 | athlete_id_1) + (1 | season:team_id), data = df_shots_select, family = binomial(link = "logit"))
 
-m_red <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id), data = df_shots_select, family = binomial(link = "logit"))
-
-m_rnd <- glmer(scoring_play ~ shot_dist + time_elapsed + season_type + shot_type + (1 | team_id) + (1 | athlete_id_1) + (1 | season:team_id), data = df_shots_select, family = binomial(link = "logit"))
-
+# FINAL MODEL
+# fixed effects for team and season
+# random effect for player
 m_rnd2 <- glmer(scoring_play ~ shot_dist + time_elapsed + season_type + shot_type + team_id*season + (1 | athlete_id_1), data = df_shots_select, family = binomial(link = "logit"))
 
 summary(m_full)
@@ -489,6 +527,10 @@ AIC(m_rnd)
 summary(m_rnd2)
 AIC(m_rnd2)
 vif(m_rnd2)
+
+
+tidy(m_rnd2) |>
+  write.csv("glm_modelterms.csv")
 
 preds <- predict(m_rnd2, newdata = df_shots_select, type = "response")
 as.tibble(preds)
