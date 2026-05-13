@@ -467,7 +467,8 @@ df_shots_select <- df_shots |>
                               season = as.factor(season),
                               season_type = as.factor(season_type),
                               athlete_id_1 = as.factor(athlete_id_1)) |>
-  drop_na(athlete_id_1)
+  drop_na(athlete_id_1) |>
+  dplyr::select(scoring_play, shot_dist, time_elapsed, type_id, shot_type, season_type, team_id, season)
 
 m_full <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id) + (1|team_id:season), data = df_shots_select, family = binomial(link = "logit"))
 
