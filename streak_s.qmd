@@ -268,7 +268,7 @@ results_2022 |>
   ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over permuted distribution",
    x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.004")
+  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .3, y = 1.8, label = "p-value = 0.004") + annotate("text", x = .02, y = 1.92, label = expression("P(hit | 3 makes) - P(hit | 3 misses) = 0.5"))
 
 ```
 
@@ -672,7 +672,9 @@ longer_2022 |>
   ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over simulated null distribution",
    x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .32, y = 1.2, label = "p-value = 0.00495")
+  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .28, y = 1.6, label = "p-value = 0.00423") +
+  annotate("text", label = expression("P(hit | 3 hits) - P(hit | 3 misses) = 0.5"),
+           x = .075, y = 1.72)
 ```
 
 ```{r}
