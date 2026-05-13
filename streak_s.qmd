@@ -262,7 +262,10 @@ df_shots |> filter((team_id == 17 & season %in% c(2022, 2023)) | (team_id == 9 &
 results_2022 |> 
   unnest_longer(perm_dist) |>
   filter(game_id == 401391727) |>
-  ggplot(aes(x = perm_dist)) + geom_density() + geom_vline(
+  ggplot(aes(x = perm_dist)) + geom_density(aes(fill = after_stat(x >= 0.5))) + scale_fill_manual(
+    values = c("FALSE" = NA, "TRUE" = "red"),
+    guide = "none"   # removes legend
+  ) + geom_vline(
     aes(xintercept = observed),
     color = "red"
   ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
@@ -640,6 +643,7 @@ longer_2022 <- sim_results_2022 |>
 sample_games <- sim_results_2022 |> 
   slice_min(p_value, n = 6) |>
   pull(game_id)
+  
 
 longer_2022 |> filter(game_id %in% sample_games) |>
   mutate(game_id = as_factor(game_id),
@@ -665,7 +669,10 @@ longer_2022 |> filter(game_id %in% sample_games) |>
 longer_2022 |>
   filter(game_id == 401391727) |>
   ggplot(aes(x = sim_value)) + 
-  geom_density() +
+  geom_density(aes(fill = after_stat(x >= 0.5))) + scale_fill_manual(
+    values = c("FALSE" = NA, "TRUE" = "red"),
+    guide = "none"   # removes legend
+  ) +
   geom_vline(
     aes(xintercept = observed_stat),
     color = "red"
@@ -1102,7 +1109,7 @@ perm2024 <- read_csv("2024_permutations.csv") |>
 pvalues_2022 |>
   left_join(unadj_2022, by = "game_id",
             suffix = c("sim", "unadj")) |>
-  left_join(perm2022, by = "game_id") |>
+  left_join(perm2022, by = c("game_id", "make_streaks", "miss_streaks")) |>
   write_csv("joinedpvalues2022.csv")
 
 
@@ -1116,7 +1123,7 @@ pvalues_2022 |>
 pvalues_2023 |>
   left_join(unadj_2023, by = "game_id",
             suffix = c("sim", "unadj")) |>
-  left_join(perm2023, by = "game_id") |>
+  left_join(perm2023, by = c("game_id", "make_streaks", "miss_streaks")) |>
   write_csv("joinedpvalues2023.csv")
 
 pvalues_2023 |>
@@ -1128,7 +1135,7 @@ pvalues_2023 |>
 pvalues_2024 |>
   left_join(unadj_2024, by = "game_id",
             suffix = c("sim", "unadj")) |>
-  left_join(perm2024, by = "game_id") |>
+  left_join(perm2024, by = c("game_id", "make_streaks", "miss_streaks")) |>
   write_csv("joinedpvalues2024.csv")
 
 pvalues_2024 |>
