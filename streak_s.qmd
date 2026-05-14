@@ -22,7 +22,7 @@ df_shots <- read_csv("df_shots.csv") |>
   dplyr::select(-`...1`) |>
   mutate(shot_type = if_else(str_detect(text, "three point") | shot_dist > 25, 3, 2),
          scoring_play = as.integer(scoring_play))
-head(df_shots)
+head(df_shots) 
 
 df_shots |>
   filter((team_id == 17 & season == 2022) | (team_id == 17 & season == 2023) | (team_id == 9 & season == 2024)) |>
@@ -195,6 +195,7 @@ set.seed(619)
 # grab one season data
 pull_list_games <- function(shots_df, TEAMID, SEASON){
   shots_df |>
+    arrange(team_id, game_id, time_elapsed) |>
     filter(team_id == TEAMID,
          season == SEASON) |>
   mutate(shot_made = as.integer(scoring_play)) |>
@@ -508,7 +509,7 @@ df_shots_select <- df_shots |>
                               athlete_id_1 = as.factor(athlete_id_1)) |>
   arrange(team_id, game_id, time_elapsed) |>
   drop_na(athlete_id_1) |>
-  dplyr::select(scoring_play, shot_dist, time_elapsed, type_id, shot_type, season_type, team_id, season, athlete_id_1, game_id, sequence_number)
+  dplyr::select(scoring_play, shot_dist, time_elapsed, type_id, shot_type, season_type, team_id, season, athlete_id_1, game_id, time_elapsed)
 
 # m_full <- glmer(scoring_play ~ shot_dist + time_elapsed + type_id + shot_type + season_type + (1|team_id) + (1|team_id:season), data = df_shots_select, family = binomial(link = "logit"))
 # 
@@ -584,7 +585,7 @@ n_sims = 10000
 sim_results_2022 <- glm_shots_predicted2 |>
   filter(team_id == 17,
          season == 2022) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   group_by(game_id) |>
   summarize(
     observed_stat = phat_Sstreak_Fstreak(scoring_play, 3),
@@ -618,7 +619,20 @@ sim_results_2022 |>
 
 p.adjust(sim_results_2022$p_value, method = "BH") |>
   cbind(sim_results_2022) |>
-  select(-c(4:10003))
+  rowwise() |>
+  mutate(mean = mean(c_across(4:1004), na.rm = TRUE),
+         se   = sd(c_across(4:1004), na.rm = TRUE) / sqrt(sum(!is.na(c_across(4:1004))))) |>
+  ungroup() |>
+  select(-c(4:10003)) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(season == 2022, team_id == 17) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |> dplyr::select(season, team_id, game_id, miss_streaks, make_streaks), by = join_by("game_id" == "game_id"))
+  write_csv("2022_pvalues.csv")
 
 # let's look at games that have low p-values
 df_shots |>
@@ -629,7 +643,7 @@ df_shots |>
                         401391678,
                         401455683)) |>
   group_by(game_id) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   summarize(statistics = streak_stats(scoring_play, 3)) |>
   unnest_wider(statistics)
 
@@ -653,7 +667,7 @@ longer_2022 |> filter(game_id %in% sample_games) |>
                 "401391678" ~ "vs. MN Lynx",
                 "401455683" ~ "vs. CT Sun",
                 "401391747" ~ "vs. CHI Sky",
-                "401391792" ~ "vs. NY Liberty")) |>
+                "401391782" ~ "vs. NY Liberty")) |>
   
   ggplot(aes(x = sim_value)) +
   geom_density() +
@@ -682,6 +696,7 @@ longer_2022 |>
   y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .28, y = 1.6, label = "p-value = 0.00423") +
   annotate("text", label = expression("P(hit | 3 hits) - P(hit | 3 misses) = 0.5"),
            x = .075, y = 1.72)
+
 ```
 
 ```{r}
@@ -689,7 +704,7 @@ set.seed(619)
 sim_results_2023 <- glm_shots_predicted2 |>
   filter(team_id == 17,
          season == 2023) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   group_by(game_id) |>
   summarize(
     observed_stat = phat_Sstreak_Fstreak(scoring_play, 3),
@@ -724,7 +739,8 @@ sim_results_2023 |> pull(p_value) |>
   na.omit() |>
   p.adjust(method = "BH") |>
   cbind(sim_results_2023 |> filter(!is.na(p_value))) |>
-  select(-c(4:10003)) 
+  select(-c(4:10003)) |>
+  write_csv("2023_pvalues.csv")
 
 
 df_shots |>
@@ -733,7 +749,7 @@ df_shots |>
          game_id %in% c(401507310, 
                         401578554)) |>
   group_by(game_id) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   summarize(statistics = streak_stats(scoring_play, 3)) |>
   unnest_wider(statistics)
 
@@ -759,7 +775,7 @@ longer_2023 |>
                 "401578574" ~ "vs. NY Liberty 1",
                 "401507292" ~ "vs. NY Liberty 2",
                 "401507248" ~ "vs. LA Sparks",
-                "401507243" ~ "vs. PHX Mercury")
+                "401507322" ~ "vs. ATL Dream 2")
                ) |>
 ggplot(aes(x = sim_value)) +
   geom_density() +
@@ -779,7 +795,7 @@ set.seed(619)
 sim_results_2024 <- glm_shots_predicted2 |>
   filter(team_id == 9,
          season == 2024) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   group_by(game_id) |>
   summarize(
     observed_stat = phat_Sstreak_Fstreak(scoring_play, 3),
@@ -813,6 +829,7 @@ sim_results_2024 |>
 p.adjust(sim_results_2024$p_value, method = "BH") |>
   cbind(sim_results_2024) |>
   select(-c(4:10003)) |>
+  left_join()
   write_csv("2024_pvalues.csv")
 
 df_shots |>
@@ -821,7 +838,7 @@ df_shots |>
          game_id %in% c(401620311, 
                         401677672)) |>
   group_by(game_id) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   summarize(statistics = streak_stats(scoring_play, 3)) |>
   unnest_wider(statistics)
 
@@ -1027,7 +1044,7 @@ unadj_2022 <- glm_shots |>
   filter(team_id == 17,
          season == 2022,
          !is.na(group)) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   group_by(game_id) |>
   filter(
     sum(group == "make_streak") >= 2,
@@ -1049,7 +1066,7 @@ unadj_2023 <- glm_shots |>
   filter(team_id == 17,
          season == 2023,
          !is.na(group)) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elasped) |>
   group_by(game_id) |>
   filter(
     sum(group == "make_streak") >= 2,
@@ -1071,7 +1088,7 @@ unadj_2024 <- glm_shots |>
   filter(team_id == 9,
          season == 2024,
          !is.na(group)) |>
-  arrange(game_id, sequence_number) |>
+  arrange(game_id, time_elapsed) |>
   group_by(game_id) |>
   filter(
     sum(group == "make_streak") >= 2,
