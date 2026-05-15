@@ -225,7 +225,9 @@ map(perm_stats_2022, hist)
 results_2022 <- tibble(
   game_id = map_int(lv_2022_games, ~ .x$game_id[1]),
   observed = map_dbl(lv_2022_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
-  perm_dist = perm_stats_2022
+  perm_dist = perm_stats_2022,
+  mean = map_dbl(perm_stats_2022, \(x) mean(x, na.rm = T)),
+  sd = map_dbl(perm_stats_2022, \(x) sd(x, na.rm = T))
 ) |>
   mutate(
     p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
@@ -238,7 +240,7 @@ results_2022 |>
 results_2022 |>
   arrange(p_value) |>
   mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
-  select(game_id, observed, p_value, p_adj) |>
+  select(game_id, observed, p_value, p_adj, mean, sd) |>
   left_join(glm_shots |>
   group_by(season, team_id, game_id) |>
     filter(team_id == 17, season == 2022) |>
@@ -289,7 +291,9 @@ map(perm_stats_2023, hist)
 results_2023 <- tibble(
   game_id = map_int(lv_2023_games, ~ .x$game_id[1]),
   observed = map_dbl(lv_2023_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
-  perm_dist = perm_stats_2023
+  perm_dist = perm_stats_2023,
+  mean = map_dbl(perm_stats_2023, \(x) mean(x, na.rm = T)),
+  sd = map_dbl(perm_stats_2023, \(x) sd(x, na.rm = T))
 ) |>
   mutate(
     p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
@@ -303,7 +307,7 @@ results_2023 |>
   na.omit(p_value) |>
   arrange(p_value) |>
   mutate(p_adj = p.adjust(p_value, "BH")) |>
-  select(game_id, observed, p_value, p_adj) |>
+  select(game_id, observed, p_value, p_adj, mean, sd) |>
   left_join(glm_shots |>
   group_by(season, team_id, game_id) |>
     filter(team_id == 17, season == 2023) |>
@@ -344,7 +348,9 @@ map(perm_stats_2024, hist)
 results_2024 <- tibble(
   game_id = map_int(ny_2024_games, ~ .x$game_id[1]),
   observed = map_dbl(ny_2024_games, ~ phat_Sstreak_Fstreak(.x$shot_made, 3)),
-  perm_dist = perm_stats_2024
+  perm_dist = perm_stats_2024,
+  mean = map_dbl(perm_stats_2024, \(x) mean(x, na.rm = T)),
+  sd = map_dbl(perm_stats_2024, \(x) sd(x, na.rm = T))
 ) |>
   mutate(
     p_value = map2_dbl(observed, perm_dist, ~ mean(.y >= .x, na.rm = T))
@@ -358,7 +364,7 @@ results_2024 |>
   na.omit(p_value) |>
   mutate(p_adj = p.adjust(p_value, "BH")) |>
   arrange(p_value) |>
-  select(game_id, observed, p_value, p_adj) |>
+  select(game_id, observed, p_value, p_adj, mean, sd) |>
   left_join(glm_shots |>
   group_by(season, team_id, game_id) |>
     filter(team_id == 9, season == 2024) |>
@@ -608,7 +614,9 @@ sim_results_2022 <- glm_shots_predicted2 |>
   ) |>
   rowwise() |>
   mutate(
-    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
+    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE),
+    mean = mean(c_across(starts_with("sim_")), na.rm = T),
+    sd = sd(c_across(starts_with("sim_")), na.rm = T)
   ) |>
   ungroup()
 
@@ -619,10 +627,6 @@ sim_results_2022 |>
 
 p.adjust(sim_results_2022$p_value, method = "BH") |>
   cbind(sim_results_2022) |>
-  rowwise() |>
-  mutate(mean = mean(c_across(4:1004), na.rm = TRUE),
-         se   = sd(c_across(4:1004), na.rm = TRUE) / sqrt(sum(!is.na(c_across(4:1004))))) |>
-  ungroup() |>
   select(-c(4:10003)) |>
   left_join(glm_shots |>
   group_by(season, team_id, game_id) |>
@@ -631,7 +635,7 @@ p.adjust(sim_results_2022$p_value, method = "BH") |>
             make_streaks = sum(as.numeric(streak_before == "3+")),
             fga = sum(shooting_play),
             fgm = sum(scoring_play)) |>
-  ungroup() |> dplyr::select(season, team_id, game_id, miss_streaks, make_streaks), by = join_by("game_id" == "game_id"))
+  ungroup() |> dplyr::select(season, team_id, game_id, miss_streaks, make_streaks), by = join_by("game_id" == "game_id")) |>
   write_csv("2022_pvalues.csv")
 
 # let's look at games that have low p-values
@@ -727,7 +731,9 @@ sim_results_2023 <- glm_shots_predicted2 |>
   ) |>
   rowwise() |>
   mutate(
-    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
+    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE),
+    mean = mean(c_across(starts_with("sim_")), na.rm = T),
+    sd = sd(c_across(starts_with("sim_")), na.rm = T)
   ) |>
   ungroup()
 
@@ -740,6 +746,14 @@ sim_results_2023 |> pull(p_value) |>
   p.adjust(method = "BH") |>
   cbind(sim_results_2023 |> filter(!is.na(p_value))) |>
   select(-c(4:10003)) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(season == 2023, team_id == 17) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |> dplyr::select(season, team_id, game_id, miss_streaks, make_streaks), by = join_by("game_id" == "game_id")) |>
   write_csv("2023_pvalues.csv")
 
 
@@ -818,7 +832,9 @@ sim_results_2024 <- glm_shots_predicted2 |>
   ) |>
   rowwise() |>
   mutate(
-    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE)
+    p_value = mean(c_across(starts_with("sim_")) >= observed_stat, na.rm = TRUE),
+    mean = mean(c_across(starts_with("sim_")), na.rm = T),
+    sd = sd(c_across(starts_with("sim_")), na.rm = T)
   ) |>
   ungroup()
 
@@ -829,7 +845,14 @@ sim_results_2024 |>
 p.adjust(sim_results_2024$p_value, method = "BH") |>
   cbind(sim_results_2024) |>
   select(-c(4:10003)) |>
-  left_join()
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(season == 2024, team_id == 9) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |> dplyr::select(season, team_id, game_id, miss_streaks, make_streaks), by = join_by("game_id" == "game_id")) |>
   write_csv("2024_pvalues.csv")
 
 df_shots |>
@@ -1055,7 +1078,17 @@ unadj_2022 <- glm_shots |>
   summarize(p_value = t.test(scoring_play ~ group, alternative = "greater")$p.value,
   diff = mean(scoring_play[group == "make_streak"]) -
          mean(scoring_play[group == "miss_streak"])) |>
-  arrange(p_value)
+  arrange(p_value) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 17, season == 2022) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id"))
 
 # 2023
 unadj_2023 <- glm_shots |>
@@ -1066,7 +1099,7 @@ unadj_2023 <- glm_shots |>
   filter(team_id == 17,
          season == 2023,
          !is.na(group)) |>
-  arrange(game_id, time_elasped) |>
+  arrange(game_id, time_elapsed) |>
   group_by(game_id) |>
   filter(
     sum(group == "make_streak") >= 2,
@@ -1077,7 +1110,17 @@ unadj_2023 <- glm_shots |>
   summarize(p_value = t.test(scoring_play ~ group, alternative = "greater")$p.value,
   diff = mean(scoring_play[group == "make_streak"]) -
          mean(scoring_play[group == "miss_streak"])) |>
-  arrange(p_value)
+  arrange(p_value) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 17, season == 2023) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id"))
 
 # 2024
 unadj_2024 <- glm_shots |>
@@ -1099,7 +1142,17 @@ unadj_2024 <- glm_shots |>
   summarize(p_value = t.test(scoring_play ~ group, alternative = "greater")$p.value,
   diff = mean(scoring_play[group == "make_streak"]) -
          mean(scoring_play[group == "miss_streak"])) |>
-  arrange(p_value)
+  arrange(p_value) |>
+  left_join(glm_shots |>
+  group_by(season, team_id, game_id) |>
+    filter(team_id == 9, season == 2024) |>
+  summarize(miss_streaks = sum(as.numeric(miss_streak_before == "3+")),
+            make_streaks = sum(as.numeric(streak_before == "3+")),
+            fga = sum(shooting_play),
+            fgm = sum(scoring_play)) |>
+  ungroup() |>
+    dplyr::select(game_id, miss_streaks, make_streaks),
+  by = join_by("game_id" == "game_id"))
 ```
 
 ## Join dataframes
@@ -1126,7 +1179,7 @@ perm2024 <- read_csv("2024_permutations.csv") |>
 pvalues_2022 |>
   left_join(unadj_2022, by = "game_id",
             suffix = c("sim", "unadj")) |>
-  left_join(perm2022, by = c("game_id", "make_streaks", "miss_streaks")) |>
+  left_join(perm2022, by = c("game_id")) |>
   write_csv("joinedpvalues2022.csv")
 
 
@@ -1140,7 +1193,7 @@ pvalues_2022 |>
 pvalues_2023 |>
   left_join(unadj_2023, by = "game_id",
             suffix = c("sim", "unadj")) |>
-  left_join(perm2023, by = c("game_id", "make_streaks", "miss_streaks")) |>
+  left_join(perm2023, by = c("game_id")) |>
   write_csv("joinedpvalues2023.csv")
 
 pvalues_2023 |>
@@ -1152,7 +1205,7 @@ pvalues_2023 |>
 pvalues_2024 |>
   left_join(unadj_2024, by = "game_id",
             suffix = c("sim", "unadj")) |>
-  left_join(perm2024, by = c("game_id", "make_streaks", "miss_streaks")) |>
+  left_join(perm2024, by = c("game_id")) |>
   write_csv("joinedpvalues2024.csv")
 
 pvalues_2024 |>
@@ -1161,4 +1214,8 @@ pvalues_2024 |>
   left_join(perm2024, by = "game_id") |>
   ggplot(aes(x = p_valuesim, y = p_valueperm)) + geom_point() + geom_abline(slope = 1, intercept = 0)
 ```
+
+## Make visualizations based on comparing distributions
+
+
 
