@@ -239,7 +239,7 @@ results_2022 |>
 
 results_2022 |>
   arrange(p_value) |>
-  mutate(p_adj = p.adjust(p_value, "BH", n = nrow(results_2022))) |>
+  mutate(p_adj = p.adjust(p_value, "BY")) |>
   select(game_id, observed, p_value, p_adj, mean, sd) |>
   left_join(glm_shots |>
   group_by(season, team_id, game_id) |>
@@ -265,16 +265,18 @@ df_shots |> filter((team_id == 17 & season %in% c(2022, 2023)) | (team_id == 9 &
 results_2022 |> 
   unnest_longer(perm_dist) |>
   filter(game_id == 401391727) |>
-  ggplot(aes(x = perm_dist)) + geom_density(aes(fill = after_stat(x >= 0.5))) + scale_fill_manual(
-    values = c("FALSE" = NA, "TRUE" = "red"),
+  ggplot(aes(x = perm_dist)) + geom_histogram(aes(fill = after_stat(x >= 0.5)), bins = 40) + scale_fill_manual(
+    values = c("FALSE" = "gray40", "TRUE" = "red"),
     guide = "none"   # removes legend
   ) + geom_vline(
     aes(xintercept = observed),
     color = "red"
-  ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
+  ) + geom_vline(aes(xintercept = mean), color = "blue", lty = 2) +
+  labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over permuted distribution",
    x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .3, y = 1.8, label = "p-value = 0.004") + annotate("text", x = .02, y = 1.92, label = expression("P(hit | 3 makes) - P(hit | 3 misses) = 0.5"))
+  y = "Frequency") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .72, y = 1000, label = "P-Value = 0.004") + annotate("text", label = "Sample Mean = -0.12", x = .17, y = 1000)
+
 
 ```
 
@@ -306,7 +308,7 @@ results_2023 |>
 results_2023 |>
   na.omit(p_value) |>
   arrange(p_value) |>
-  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  mutate(p_adj = p.adjust(p_value, "BY")) |>
   select(game_id, observed, p_value, p_adj, mean, sd) |>
   left_join(glm_shots |>
   group_by(season, team_id, game_id) |>
@@ -323,7 +325,7 @@ results_2023 |>
 results_2023 |>
   na.omit(p_value) |>
   arrange(p_value) |>
-  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  mutate(p_adj = p.adjust(p_value, "BY")) |>
   pull(observed) |>
   t.test(mu = 0)
 
@@ -362,7 +364,7 @@ results_2024 |>
 
 results_2024 |>
   na.omit(p_value) |>
-  mutate(p_adj = p.adjust(p_value, "BH")) |>
+  mutate(p_adj = p.adjust(p_value, "BY")) |>
   arrange(p_value) |>
   select(game_id, observed, p_value, p_adj, mean, sd) |>
   left_join(glm_shots |>
@@ -625,7 +627,7 @@ sim_results_2022 |>
   select(-c(3:10002)) |>
   arrange(p_value)
 
-p.adjust(sim_results_2022$p_value, method = "BH") |>
+p.adjust(sim_results_2022$p_value, method = "BY") |>
   cbind(sim_results_2022) |>
   select(-c(4:10003)) |>
   left_join(glm_shots |>
@@ -674,7 +676,7 @@ longer_2022 |> filter(game_id %in% sample_games) |>
                 "401391782" ~ "vs. NY Liberty")) |>
   
   ggplot(aes(x = sim_value)) +
-  geom_density() +
+  geom_histogram(bins = 40) +
   geom_vline(
     aes(xintercept = observed_stat),
     color = "red"
@@ -682,25 +684,22 @@ longer_2022 |> filter(game_id %in% sample_games) |>
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2022 LV Aces",
   subtitle = "On simulated null distributions",
    x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
+  y = "Frequency") + theme_minimal() + theme(panel.grid.minor = element_blank())
 
 longer_2022 |>
   filter(game_id == 401391727) |>
   ggplot(aes(x = sim_value)) + 
-  geom_density(aes(fill = after_stat(x >= 0.5))) + scale_fill_manual(
-    values = c("FALSE" = NA, "TRUE" = "red"),
+  geom_histogram(aes(fill = after_stat(x >= 0.5)), bins = 40) + scale_fill_manual(
+    values = c("FALSE" = "gray40", "TRUE" = "red"),
     guide = "none"   # removes legend
   ) +
   geom_vline(
     aes(xintercept = observed_stat),
     color = "red"
-  ) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
+  ) + geom_vline(aes(xintercept = mean), color = "blue", lty = 2) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over simulated null distribution",
    x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-  y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .28, y = 1.6, label = "p-value = 0.00423") +
-  annotate("text", label = expression("P(hit | 3 hits) - P(hit | 3 misses) = 0.5"),
-           x = .075, y = 1.72)
-
+  y = "Frequency") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .3, y = 800, label = "p-value = 0.003") + annotate("text", x = -.4, y = 800, label = "Sample Mean = -0.14")
 ```
 
 ```{r}
@@ -743,7 +742,7 @@ sim_results_2023 |>
 
 sim_results_2023 |> pull(p_value) |>
   na.omit() |>
-  p.adjust(method = "BH") |>
+  p.adjust(method = "BY") |>
   cbind(sim_results_2023 |> filter(!is.na(p_value))) |>
   select(-c(4:10003)) |>
   left_join(glm_shots |>
@@ -792,14 +791,14 @@ longer_2023 |>
                 "401507322" ~ "vs. ATL Dream 2")
                ) |>
 ggplot(aes(x = sim_value)) +
-  geom_density() +
+  geom_histogram(bins = 40) +
   geom_vline(aes(xintercept = observed_stat),
     color = "red"
   ) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2023 LV Aces",
                                                 subtitle = "On simulated null distributions",
                                                 x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-                                                y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
+                                                y = "Frequency") + theme_minimal() + theme(panel.grid.minor = element_blank())
 
 ```
 
@@ -842,7 +841,7 @@ sim_results_2024 |>
   select(-c(3:10002)) |>
   arrange(p_value)
 
-p.adjust(sim_results_2024$p_value, method = "BH") |>
+p.adjust(sim_results_2024$p_value, method = "BY") |>
   cbind(sim_results_2024) |>
   select(-c(4:10003)) |>
   left_join(glm_shots |>
@@ -888,7 +887,7 @@ longer_2024 |>
                 "401620263" ~ "vs. IN Fever")
                ) |>
 ggplot(aes(x = sim_value)) +
-  geom_density() +
+  geom_histogram(bins = 40) +
   geom_vline(
     aes(xintercept = observed_stat),
     color = "red"
@@ -896,7 +895,7 @@ ggplot(aes(x = sim_value)) +
   facet_wrap(~ game_id, scales = "free") + labs(title = "Greatest Streak Statistics for 2024 NY Liberty",
                                                 subtitle = "On simulated null distributions",
                                                 x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-                                                y = "Density") + theme_minimal() + theme(panel.grid.minor = element_blank())
+                                                y = "Frequency") + theme_minimal() + theme(panel.grid.minor = element_blank())
 ```
 
 What happened during these games?
@@ -958,7 +957,7 @@ df_shots |> filter(game_id == 401391655, team_id == 3)
 ## Join number of streaks with p-values
 
 ```{r}
-p.adjust(sim_results_2022$p_value, method = "BH") |>
+p.adjust(sim_results_2022$p_value, method = "BY") |>
   cbind(sim_results_2022) |>
   select(-c(4:10003)) |>
   left_join(glm_shots |>
@@ -973,7 +972,7 @@ p.adjust(sim_results_2022$p_value, method = "BH") |>
   by = join_by("game_id" == "game_id")) |>
   write_csv("2022_pvalues.csv")
 
-p.adjust(sim_results_2023$p_value, method = "BH") |>
+p.adjust(sim_results_2023$p_value, method = "BY") |>
   cbind(sim_results_2023) |>
   select(-c(4:10003)) |>
   left_join(glm_shots |>
@@ -989,7 +988,7 @@ p.adjust(sim_results_2023$p_value, method = "BH") |>
   write_csv("2023_pvalues.csv")
 
 
-p.adjust(sim_results_2024$p_value, method = "BH") |>
+p.adjust(sim_results_2024$p_value, method = "BY") |>
   cbind(sim_results_2024) |>
   select(-c(4:10003)) |>
   left_join(glm_shots |>
@@ -1014,7 +1013,7 @@ p.adjust(sim_results_2024$p_value, method = "BH") |>
 df_shots |>
   group_by(season, team_id, game_id) |>
   summarize(streak_stats = phat_Sstreak_Fstreak(scoring_play, 3)) |>
-  ggplot(aes(x = streak_stats)) + geom_density() + theme_minimal()  + geom_vline(aes(xintercept = mean(streak_stats, na.rm = T), color = "red")) +  theme(panel.grid.minor = element_blank(),
+  ggplot(aes(x = streak_stats)) + geom_histogram(bins = 40) + theme_minimal()  + geom_vline(aes(xintercept = mean(streak_stats, na.rm = T), color = "red")) +  theme(panel.grid.minor = element_blank(),
                                                                                                                                                           legend.position = "none") + labs(x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
                                                                                                                       y = "Density",
                                                                                                                       title = "Streak Statistic Distribution Across the League",
