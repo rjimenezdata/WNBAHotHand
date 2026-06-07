@@ -699,7 +699,8 @@ longer_2022 |>
   ) + geom_vline(aes(xintercept = mean), color = "blue", lty = 2) + labs(title = "Streak Statistic for 2022 LV Aces vs. LA Sparks on 6/11/22",
   subtitle = "Over simulated null distribution",
    x = expression("P(hit | 3 hits) = P(hit | 3 misses)"),
-  y = "Frequency") + theme_minimal() + theme(panel.grid.minor = element_blank()) + annotate("text", x = .3, y = 800, label = "p-value = 0.003") + annotate("text", x = -.4, y = 800, label = "Sample Mean = -0.14")
+  y = "Frequency") + theme_minimal() + theme(panel.grid.minor = element_blank(),
+                                             plot.margin = margin(t = 10, r = 20, b = 30, l = 20)) + annotate("text", x = .3, y = 800, label = "p-value = 0.003") + annotate("text", x = -.4, y = 800, label = "Sample Mean = -0.14")
 ```
 
 ```{r}
